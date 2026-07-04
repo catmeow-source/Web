@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* ============================================================
+   BRAND COLORS — Preserved across all themes
+   ============================================================ */
 @theme {
   --color-brand-purple: #a855f7;
   --color-brand-purple-dark: #7e22ce;
@@ -16,52 +19,487 @@
   --color-brand-amber: #f59e0b;
   --color-brand-amber-dark: #b45309;
   --color-brand-amber-light: #fcd34d;
-
-  --color-dark-bg: #09090b;
-  --color-dark-card: #18181b;
-  --color-dark-border: #27272a;
 }
 
+/* ============================================================
+   DEFAULT — applied before any theme attribute resolves
+   Matches "dark" to prevent flash if attribute hasn't loaded.
+   ============================================================ */
 :root {
-  --background: #fafafa;
-  --foreground: #09090b;
-  --card: #ffffff;
-  --card-foreground: #09090b;
-  --border: #e4e4e7;
-}
-
-/* Enable class-based dark mode manually */
-.dark {
-  --background: #09090b;
-  --foreground: #fafafa;
-  --card: #18181b;
-  --card-foreground: #fafafa;
+  --bg-base: #09090b;
+  --bg-subtle: #101014;
+  --surface: #18181b;
+  --surface-elevated: #27272a;
   --border: #27272a;
+  --border-subtle: #1d1d20;
+  --text-primary: #fafafa;
+  --text-secondary: #a1a1aa;
+  --text-muted: #52525b;
+  --primary: #a855f7;
+  --primary-fg: #ffffff;
+  --secondary: #14b8a6;
+  --accent: #f59e0b;
+  --hover-bg: #27272a;
+  --active-bg: #3f3f46;
+  --focus-ring: #a855f7;
+  --disabled-bg: #27272a;
+  --disabled-text: #52525b;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --info: #3b82f6;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.5);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.5);
+  --shadow-lg: 0 8px 40px rgba(0,0,0,0.6);
+  --overlay: rgba(0,0,0,0.7);
+  --scrollbar-thumb: rgba(161,161,170,0.3);
+  --selection-bg: #7c3aed;
+  --selection-text: #ffffff;
+  --glass-bg: rgba(24,24,27,0.65);
+  --glass-border: rgba(255,255,255,0.05);
+  --chart-1: #a855f7;
+  --chart-2: #14b8a6;
+  --chart-3: #f59e0b;
+  --chart-4: #f97316;
+  --chart-5: #3b82f6;
+  --chart-6: #22c55e;
 }
 
+/* ============================================================
+   🌞 LIGHT THEME
+   Clean, modern, bright neutrals with subtle shadows.
+   ============================================================ */
+[data-theme="light"] {
+  --bg-base: #fafafa;
+  --bg-subtle: #f4f4f5;
+  --surface: #ffffff;
+  --surface-elevated: #f9f9fb;
+  --border: #e4e4e7;
+  --border-subtle: #f0f0f2;
+  --text-primary: #09090b;
+  --text-secondary: #52525b;
+  --text-muted: #a1a1aa;
+  --primary: #7c3aed;
+  --primary-fg: #ffffff;
+  --secondary: #0f766e;
+  --accent: #b45309;
+  --hover-bg: #f4f4f5;
+  --active-bg: #e4e4e7;
+  --focus-ring: #7c3aed;
+  --disabled-bg: #f4f4f5;
+  --disabled-text: #a1a1aa;
+  --success: #16a34a;
+  --warning: #d97706;
+  --error: #dc2626;
+  --info: #2563eb;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.06);
+  --shadow-lg: 0 8px 40px rgba(0,0,0,0.12), 0 4px 8px rgba(0,0,0,0.08);
+  --overlay: rgba(0,0,0,0.45);
+  --scrollbar-thumb: rgba(82,82,91,0.3);
+  --selection-bg: #ddd6fe;
+  --selection-text: #4c1d95;
+  --glass-bg: rgba(255,255,255,0.75);
+  --glass-border: rgba(0,0,0,0.08);
+  --chart-1: #7c3aed;
+  --chart-2: #0f766e;
+  --chart-3: #d97706;
+  --chart-4: #c2410c;
+  --chart-5: #2563eb;
+  --chart-6: #16a34a;
+}
+
+/* ============================================================
+   🌙 DARK THEME
+   Elegant dark gray/black palette with balanced contrast.
+   ============================================================ */
+[data-theme="dark"] {
+  --bg-base: #09090b;
+  --bg-subtle: #101014;
+  --surface: #18181b;
+  --surface-elevated: #27272a;
+  --border: #27272a;
+  --border-subtle: #1d1d20;
+  --text-primary: #fafafa;
+  --text-secondary: #a1a1aa;
+  --text-muted: #52525b;
+  --primary: #a855f7;
+  --primary-fg: #ffffff;
+  --secondary: #14b8a6;
+  --accent: #f59e0b;
+  --hover-bg: #27272a;
+  --active-bg: #3f3f46;
+  --focus-ring: #a855f7;
+  --disabled-bg: #27272a;
+  --disabled-text: #52525b;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --info: #3b82f6;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.5);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.5);
+  --shadow-lg: 0 8px 40px rgba(0,0,0,0.6);
+  --overlay: rgba(0,0,0,0.7);
+  --scrollbar-thumb: rgba(161,161,170,0.3);
+  --selection-bg: #7c3aed;
+  --selection-text: #ffffff;
+  --glass-bg: rgba(24,24,27,0.65);
+  --glass-border: rgba(255,255,255,0.05);
+  --chart-1: #a855f7;
+  --chart-2: #14b8a6;
+  --chart-3: #f59e0b;
+  --chart-4: #f97316;
+  --chart-5: #3b82f6;
+  --chart-6: #22c55e;
+}
+
+/* ============================================================
+   💎 LIQUID GLASS THEME
+   Frosted glass effect, translucent surfaces, soft gradients,
+   blur and subtle reflections — modern glassmorphism.
+   ============================================================ */
+[data-theme="liquid-glass"] {
+  --bg-base: linear-gradient(135deg, #e8eaf6 0%, #f3e5f5 50%, #e0f2fe 100%);
+  --bg-subtle: rgba(240,242,255,0.85);
+  --surface: rgba(255,255,255,0.35);
+  --surface-elevated: rgba(255,255,255,0.55);
+  --border: rgba(148,163,184,0.3);
+  --border-subtle: rgba(148,163,184,0.15);
+  --text-primary: #1e1b4b;
+  --text-secondary: #4338ca;
+  --text-muted: #818cf8;
+  --primary: #6366f1;
+  --primary-fg: #ffffff;
+  --secondary: #8b5cf6;
+  --accent: #c084fc;
+  --hover-bg: rgba(99,102,241,0.08);
+  --active-bg: rgba(99,102,241,0.15);
+  --focus-ring: #6366f1;
+  --disabled-bg: rgba(148,163,184,0.15);
+  --disabled-text: #94a3b8;
+  --success: #059669;
+  --warning: #d97706;
+  --error: #dc2626;
+  --info: #2563eb;
+  --shadow-sm: 0 2px 8px rgba(99,102,241,0.12), 0 0 0 1px rgba(255,255,255,0.6);
+  --shadow-md: 0 8px 32px rgba(99,102,241,0.18), 0 0 0 1px rgba(255,255,255,0.5);
+  --shadow-lg: 0 16px 64px rgba(99,102,241,0.22), 0 0 0 1px rgba(255,255,255,0.4);
+  --overlay: rgba(99,102,241,0.15);
+  --scrollbar-thumb: rgba(99,102,241,0.35);
+  --selection-bg: rgba(99,102,241,0.25);
+  --selection-text: #3730a3;
+  --glass-bg: rgba(255,255,255,0.3);
+  --glass-border: rgba(255,255,255,0.5);
+  --chart-1: #6366f1;
+  --chart-2: #8b5cf6;
+  --chart-3: #c084fc;
+  --chart-4: #06b6d4;
+  --chart-5: #10b981;
+  --chart-6: #f472b6;
+}
+
+/* ============================================================
+   🌌 GALAXY THEME
+   Deep space — navy, indigo, violet, and star-like accents.
+   ============================================================ */
+[data-theme="galaxy"] {
+  --bg-base: #04020e;
+  --bg-subtle: #08061a;
+  --surface: #0f0b27;
+  --surface-elevated: #17124a;
+  --border: #2d2674;
+  --border-subtle: #1a1545;
+  --text-primary: #e8e6ff;
+  --text-secondary: #9d98e8;
+  --text-muted: #5650a8;
+  --primary: #818cf8;
+  --primary-fg: #030014;
+  --secondary: #a78bfa;
+  --accent: #e879f9;
+  --hover-bg: #1a1545;
+  --active-bg: #2d2674;
+  --focus-ring: #818cf8;
+  --disabled-bg: #17124a;
+  --disabled-text: #5650a8;
+  --success: #34d399;
+  --warning: #fbbf24;
+  --error: #f87171;
+  --info: #60a5fa;
+  --shadow-sm: 0 1px 4px rgba(129,140,248,0.2), 0 0 8px rgba(129,140,248,0.05);
+  --shadow-md: 0 4px 24px rgba(129,140,248,0.25), 0 0 40px rgba(167,139,250,0.08);
+  --shadow-lg: 0 8px 60px rgba(129,140,248,0.3), 0 0 80px rgba(232,121,249,0.08);
+  --overlay: rgba(4,2,14,0.8);
+  --scrollbar-thumb: rgba(129,140,248,0.35);
+  --selection-bg: #4338ca;
+  --selection-text: #e8e6ff;
+  --glass-bg: rgba(15,11,39,0.75);
+  --glass-border: rgba(129,140,248,0.15);
+  --chart-1: #818cf8;
+  --chart-2: #a78bfa;
+  --chart-3: #e879f9;
+  --chart-4: #38bdf8;
+  --chart-5: #34d399;
+  --chart-6: #fbbf24;
+}
+
+/* ============================================================
+   🌿 JUNGLE THEME
+   Rich greens, earthy browns, moss, natural foliage accents.
+   ============================================================ */
+[data-theme="jungle"] {
+  --bg-base: #070f07;
+  --bg-subtle: #0d180d;
+  --surface: #122012;
+  --surface-elevated: #1a2e1a;
+  --border: #2d4a2d;
+  --border-subtle: #1e351e;
+  --text-primary: #d4edda;
+  --text-secondary: #7cbf8a;
+  --text-muted: #3d6b45;
+  --primary: #4ade80;
+  --primary-fg: #052e16;
+  --secondary: #a3e635;
+  --accent: #fbbf24;
+  --hover-bg: #1a2e1a;
+  --active-bg: #2d4a2d;
+  --focus-ring: #4ade80;
+  --disabled-bg: #1a2e1a;
+  --disabled-text: #3d6b45;
+  --success: #4ade80;
+  --warning: #fbbf24;
+  --error: #f87171;
+  --info: #34d399;
+  --shadow-sm: 0 1px 4px rgba(0,0,0,0.5), 0 0 8px rgba(74,222,128,0.04);
+  --shadow-md: 0 4px 20px rgba(0,0,0,0.5), 0 0 30px rgba(74,222,128,0.06);
+  --shadow-lg: 0 8px 50px rgba(0,0,0,0.6), 0 0 60px rgba(74,222,128,0.08);
+  --overlay: rgba(7,15,7,0.8);
+  --scrollbar-thumb: rgba(74,222,128,0.3);
+  --selection-bg: #15803d;
+  --selection-text: #d4edda;
+  --glass-bg: rgba(18,32,18,0.7);
+  --glass-border: rgba(74,222,128,0.1);
+  --chart-1: #4ade80;
+  --chart-2: #a3e635;
+  --chart-3: #fbbf24;
+  --chart-4: #34d399;
+  --chart-5: #86efac;
+  --chart-6: #f97316;
+}
+
+/* ============================================================
+   🏖️ BEACH THEME
+   Sand, turquoise, ocean blue, coral, warm sunlight.
+   ============================================================ */
+[data-theme="beach"] {
+  --bg-base: #fdf6e3;
+  --bg-subtle: #fef3c7;
+  --surface: #fffbf0;
+  --surface-elevated: #ffffff;
+  --border: #e7d5a3;
+  --border-subtle: #f3e8c4;
+  --text-primary: #1c2b3a;
+  --text-secondary: #2c5f6e;
+  --text-muted: #7a9baa;
+  --primary: #0891b2;
+  --primary-fg: #ffffff;
+  --secondary: #f97316;
+  --accent: #f43f5e;
+  --hover-bg: #fef3c7;
+  --active-bg: #fde68a;
+  --focus-ring: #0891b2;
+  --disabled-bg: #fef3c7;
+  --disabled-text: #9eb9c4;
+  --success: #059669;
+  --warning: #d97706;
+  --error: #dc2626;
+  --info: #0891b2;
+  --shadow-sm: 0 1px 4px rgba(28,43,58,0.08), 0 1px 2px rgba(8,145,178,0.05);
+  --shadow-md: 0 4px 16px rgba(28,43,58,0.1), 0 2px 6px rgba(8,145,178,0.08);
+  --shadow-lg: 0 8px 40px rgba(28,43,58,0.14), 0 4px 12px rgba(8,145,178,0.1);
+  --overlay: rgba(28,43,58,0.5);
+  --scrollbar-thumb: rgba(8,145,178,0.3);
+  --selection-bg: #bae6fd;
+  --selection-text: #0c4a6e;
+  --glass-bg: rgba(255,251,240,0.75);
+  --glass-border: rgba(8,145,178,0.2);
+  --chart-1: #0891b2;
+  --chart-2: #f97316;
+  --chart-3: #f43f5e;
+  --chart-4: #059669;
+  --chart-5: #8b5cf6;
+  --chart-6: #d97706;
+}
+
+/* ============================================================
+   🤠 WILD WEST THEME
+   Leather browns, desert beige, burnt orange, antique gold.
+   ============================================================ */
+[data-theme="wild-west"] {
+  --bg-base: #0e0804;
+  --bg-subtle: #170f08;
+  --surface: #211408;
+  --surface-elevated: #2e1d0c;
+  --border: #4a2e12;
+  --border-subtle: #38220d;
+  --text-primary: #f5deb3;
+  --text-secondary: #c4914a;
+  --text-muted: #7a5030;
+  --primary: #d97706;
+  --primary-fg: #1a0a00;
+  --secondary: #b45309;
+  --accent: #fbbf24;
+  --hover-bg: #2e1d0c;
+  --active-bg: #4a2e12;
+  --focus-ring: #d97706;
+  --disabled-bg: #2e1d0c;
+  --disabled-text: #7a5030;
+  --success: #65a30d;
+  --warning: #f59e0b;
+  --error: #dc2626;
+  --info: #7c3aed;
+  --shadow-sm: 0 1px 4px rgba(14,8,4,0.7), 0 0 6px rgba(217,119,6,0.05);
+  --shadow-md: 0 4px 20px rgba(14,8,4,0.7), 0 0 20px rgba(217,119,6,0.08);
+  --shadow-lg: 0 8px 50px rgba(14,8,4,0.8), 0 0 40px rgba(217,119,6,0.1);
+  --overlay: rgba(14,8,4,0.82);
+  --scrollbar-thumb: rgba(196,145,74,0.35);
+  --selection-bg: #92400e;
+  --selection-text: #f5deb3;
+  --glass-bg: rgba(33,20,8,0.75);
+  --glass-border: rgba(196,145,74,0.15);
+  --chart-1: #d97706;
+  --chart-2: #b45309;
+  --chart-3: #fbbf24;
+  --chart-4: #dc2626;
+  --chart-5: #65a30d;
+  --chart-6: #a16207;
+}
+
+/* ============================================================
+   ⚡ CYBERPUNK THEME
+   Neon cyan, magenta, purple, electric blue, dark futurism.
+   ============================================================ */
+[data-theme="cyberpunk"] {
+  --bg-base: #020008;
+  --bg-subtle: #04000f;
+  --surface: #09001e;
+  --surface-elevated: #120035;
+  --border: #2a0060;
+  --border-subtle: #180040;
+  --text-primary: #e0f7ff;
+  --text-secondary: #22d3ee;
+  --text-muted: #0e6e82;
+  --primary: #06b6d4;
+  --primary-fg: #020008;
+  --secondary: #d946ef;
+  --accent: #a855f7;
+  --hover-bg: #120035;
+  --active-bg: #2a0060;
+  --focus-ring: #06b6d4;
+  --disabled-bg: #120035;
+  --disabled-text: #0e6e82;
+  --success: #22d3ee;
+  --warning: #fbbf24;
+  --error: #f43f5e;
+  --info: #818cf8;
+  --shadow-sm: 0 0 6px rgba(6,182,212,0.3), 0 0 12px rgba(6,182,212,0.1);
+  --shadow-md: 0 0 20px rgba(6,182,212,0.4), 0 0 40px rgba(217,70,239,0.1);
+  --shadow-lg: 0 0 40px rgba(6,182,212,0.5), 0 0 80px rgba(217,70,239,0.15);
+  --overlay: rgba(2,0,8,0.85);
+  --scrollbar-thumb: rgba(6,182,212,0.4);
+  --selection-bg: #0e7490;
+  --selection-text: #e0f7ff;
+  --glass-bg: rgba(9,0,30,0.72);
+  --glass-border: rgba(6,182,212,0.2);
+  --chart-1: #06b6d4;
+  --chart-2: #d946ef;
+  --chart-3: #a855f7;
+  --chart-4: #818cf8;
+  --chart-5: #22d3ee;
+  --chart-6: #f43f5e;
+}
+
+/* ============================================================
+   📼 RETRO THEME
+   Warm vintage — mustard, teal, burnt orange, avocado green,
+   cream, and muted reds — inspired by 70s/80s design.
+   ============================================================ */
+[data-theme="retro"] {
+  --bg-base: #1e1409;
+  --bg-subtle: #271b0e;
+  --surface: #302215;
+  --surface-elevated: #3e2c1c;
+  --border: #5c3f22;
+  --border-subtle: #4a3018;
+  --text-primary: #f2e6c8;
+  --text-secondary: #d4a855;
+  --text-muted: #8a6535;
+  --primary: #d97706;
+  --primary-fg: #1e1409;
+  --secondary: #0d9488;
+  --accent: #dc5c3c;
+  --hover-bg: #3e2c1c;
+  --active-bg: #5c3f22;
+  --focus-ring: #d97706;
+  --disabled-bg: #3e2c1c;
+  --disabled-text: #8a6535;
+  --success: #5a9e5a;
+  --warning: #d97706;
+  --error: #c0392b;
+  --info: #0d9488;
+  --shadow-sm: 0 2px 4px rgba(30,20,9,0.6);
+  --shadow-md: 0 4px 16px rgba(30,20,9,0.65);
+  --shadow-lg: 0 8px 40px rgba(30,20,9,0.7);
+  --overlay: rgba(30,20,9,0.8);
+  --scrollbar-thumb: rgba(212,168,85,0.35);
+  --selection-bg: #92400e;
+  --selection-text: #f2e6c8;
+  --glass-bg: rgba(48,34,21,0.72);
+  --glass-border: rgba(212,168,85,0.15);
+  --chart-1: #d97706;
+  --chart-2: #0d9488;
+  --chart-3: #dc5c3c;
+  --chart-4: #5a9e5a;
+  --chart-5: #d4a855;
+  --chart-6: #c0392b;
+}
+
+/* ============================================================
+   GLOBAL BASE STYLES
+   ============================================================ */
 body {
-  background-color: var(--background);
-  color: var(--foreground);
+  background-color: var(--bg-base);
+  color: var(--text-primary);
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+  transition: background-color 0.35s ease, color 0.35s ease, border-color 0.35s ease;
 }
 
-/* Glassmorphism custom classes */
+/* Liquid Glass uses a gradient bg — special handling */
+[data-theme="liquid-glass"] body {
+  background: var(--bg-base);
+  min-height: 100vh;
+}
+
+/* ============================================================
+   GLASSMORPHISM UTILITY
+   .glass adapts per theme via CSS vars
+   ============================================================ */
 .glass {
-  background: rgba(255, 255, 255, 0.45);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: var(--glass-bg);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--glass-border);
 }
 
-.dark .glass {
-  background: rgba(24, 24, 27, 0.65);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+/* Liquid Glass gets extra blur for premium depth */
+[data-theme="liquid-glass"] .glass {
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  box-shadow: var(--shadow-md);
 }
 
-/* Custom Scrollbar */
+/* ============================================================
+   CUSTOM SCROLLBAR — uses theme token
+   ============================================================ */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -72,15 +510,39 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(156, 163, 175, 0.3);
+  background: var(--scrollbar-thumb);
   border-radius: 4px;
+  transition: background 0.2s;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(156, 163, 175, 0.5);
+  background: color-mix(in srgb, var(--scrollbar-thumb) 160%, transparent);
 }
 
-/* Animations */
+/* ============================================================
+   TEXT SELECTION — uses theme token
+   ============================================================ */
+::selection {
+  background: var(--selection-bg);
+  color: var(--selection-text);
+}
+
+/* ============================================================
+   THEME TRANSITION — smooth switch on attribute change
+   ============================================================ */
+*, *::before, *::after {
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Exclude transitions on elements where instant response matters */
+input, textarea, select, button {
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease,
+              box-shadow 0.3s ease, transform 0.15s ease, opacity 0.15s ease;
+}
+
+/* ============================================================
+   ANIMATIONS — unchanged
+   ============================================================ */
 @keyframes pulse-subtle {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.7; }
@@ -103,4 +565,28 @@ body {
 
 .animate-slide-up {
   animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* ============================================================
+   CYBERPUNK — Neon glow pulse animation
+   ============================================================ */
+@keyframes neon-pulse {
+  0%, 100% { text-shadow: 0 0 4px currentColor, 0 0 8px currentColor; }
+  50% { text-shadow: 0 0 8px currentColor, 0 0 20px currentColor, 0 0 40px currentColor; }
+}
+
+[data-theme="cyberpunk"] .neon-text {
+  animation: neon-pulse 2.5s ease-in-out infinite;
+}
+
+/* ============================================================
+   GALAXY — Star shimmer
+   ============================================================ */
+@keyframes star-shimmer {
+  0%, 100% { opacity: 1; filter: brightness(1); }
+  50% { opacity: 0.8; filter: brightness(1.4); }
+}
+
+[data-theme="galaxy"] .shimmer {
+  animation: star-shimmer 3s ease-in-out infinite;
 }
