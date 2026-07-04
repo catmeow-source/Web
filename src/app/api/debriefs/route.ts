@@ -127,7 +127,7 @@ export async function POST() {
 
     const habitsWithData = await db.habit.findMany({
       where: { userId: user.id },
-      select: { lesson: true, result: true },
+      select: { lesson: true, result: true, name: true, streak: true },
     });
 
     const lessons = [
@@ -142,6 +142,14 @@ export async function POST() {
       ...habitsWithData.map(h => h.result)
     ].filter(r => r && r.trim().length > 0);
 
+    // Call new AI helpers (AI 5 and AI 6)
+    const { spotWeeklyLessonPatterns, generateHabitCoachFeedback } = require('@/lib/ai');
+    const lessonPatterns = await spotWeeklyLessonPatterns(lessons);
+    
+    const totalWeekDeadlines = totalDeadlinesHit + totalDeadlinesMissed;
+    const habitsInfo = habitsWithData.map(h => ({ name: h.name, streak: h.streak }));
+    const habitAdvice = await generateHabitCoachFeedback(habitsInfo, totalWeekDeadlines);
+
     // Call AI helper to compile summary details
     const debriefInfo = await generateWeeklyDebrief({
       tasksCompleted: completedTasksCount,
@@ -151,6 +159,12 @@ export async function POST() {
       lessons,
       results,
     });
+
+    const lessonsSection = lessonPatterns.length > 0
+      ? `\n\nLesson Patterns:\n${lessonPatterns.map(lp => `• ${lp}`).join('\n')}`
+      : '';
+    const coachSection = `\n\nHabit Coach:\n${habitAdvice}`;
+    const fullSummary = `${debriefInfo.summary}${lessonsSection}${coachSection}`;
 
     // Upsert debrief
     const debrief = await db.weeklyDebrief.upsert({
@@ -167,7 +181,7 @@ export async function POST() {
         deadlinesMissed: totalDeadlinesMissed,
         topLesson: debriefInfo.topLesson,
         topResult: debriefInfo.topResult,
-        summary: debriefInfo.summary,
+        summary: fullSummary,
         generatedAt: new Date(),
       },
       create: {
@@ -179,7 +193,7 @@ export async function POST() {
         deadlinesMissed: totalDeadlinesMissed,
         topLesson: debriefInfo.topLesson,
         topResult: debriefInfo.topResult,
-        summary: debriefInfo.summary,
+        summary: fullSummary,
       },
     });
 

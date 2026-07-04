@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
+import { calculateProjectHealth } from '../../route';
 
 export async function GET(
   request: Request,
@@ -31,7 +32,14 @@ export async function GET(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    return NextResponse.json(project);
+    const health = calculateProjectHealth(project);
+    const enriched = {
+      ...project,
+      healthScore: health.score,
+      healthDetails: health.summary,
+    };
+
+    return NextResponse.json(enriched);
   } catch (error) {
     console.error('GET project id error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
@@ -78,7 +86,14 @@ export async function PUT(
       include: { tasks: true },
     });
 
-    return NextResponse.json(updatedProject);
+    const health = calculateProjectHealth(updatedProject);
+    const enriched = {
+      ...updatedProject,
+      healthScore: health.score,
+      healthDetails: health.summary,
+    };
+
+    return NextResponse.json(enriched);
   } catch (error) {
     console.error('PUT project id error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

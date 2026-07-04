@@ -22,6 +22,19 @@ model User {
   notifications    Notification[]
   weeklyDebriefs   WeeklyDebrief[]
   sessions         Session[]
+  monthlyReports   MonthlyReport[]
+}
+
+model MonthlyReport {
+  id            String   @id @default(cuid())
+  monthStart    String   // YYYY-MM
+  summary       String
+  trends        String   // JSON string of stats and insights
+  generatedAt   DateTime @default(now())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, monthStart])
 }
 
 model Session {

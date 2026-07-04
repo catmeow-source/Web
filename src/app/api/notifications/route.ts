@@ -85,6 +85,36 @@ async function syncNotifications(userId: string, reminderTimingDays: number) {
         });
       }
     }
+
+    // Stale Task Detector (AI 13)
+    const untouchedDays = Math.floor((now.getTime() - task.createdAt.getTime()) / (24 * 60 * 60 * 1000));
+    if (task.deadline && untouchedDays >= 7) {
+      const diff = task.deadline.getTime() - now.getTime();
+      // Untouched for 7+ days and deadline is within 4 days
+      if (diff > 0 && diff <= 4 * 24 * 60 * 60 * 1000) {
+        const existingStale = await db.notification.findFirst({
+          where: {
+            userId,
+            type: 'stale_task',
+            refId: task.id,
+          },
+        });
+
+        if (!existingStale) {
+          await db.notification.create({
+            data: {
+              userId,
+              type: 'stale_task',
+              refId: task.id,
+              refType: 'task',
+              dueDate: task.deadline,
+              title: 'Stale Task Warning',
+              message: `"${task.name}" hasn't been touched in ${untouchedDays} days. Deadline is in ${Math.ceil(diff / (24 * 60 * 60 * 1000))} days. It is now your most urgent task.`,
+            },
+          });
+        }
+      }
+    }
   }
 
   // Find all scheduled tasks

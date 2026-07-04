@@ -1,13 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Bell, User, Info, Folder, RotateCcw, Calendar as CalendarIcon, Clock, Plus, Trash2, 
   Edit, Brain, Check, X, ChevronLeft, ChevronRight, Sparkles, Sun, Moon, LogOut, 
-  Settings, AlertTriangle, Play, CheckCircle, HelpCircle, BarChart2, Palette
+  Settings, AlertTriangle, Play, CheckCircle, HelpCircle, BarChart2
 } from 'lucide-react';
-import { THEMES, applyTheme, getInitialTheme, type ThemeDefinition } from '@/lib/themes';
 
 // Data models interfaces matching backend
 interface Task {
@@ -98,116 +97,6 @@ interface UserProfile {
   reminderTiming: number;
 }
 
-// ============================================================
-// THEME SWATCH — shows 3 color dots for a theme
-// ============================================================
-function ThemeSwatch({ swatches }: { swatches: [string, string, string] }) {
-  return (
-    <div className="flex gap-1 items-center">
-      {swatches.map((color, i) => (
-        <div
-          key={i}
-          className="w-3 h-3 rounded-full ring-1 ring-black/10"
-          style={{ backgroundColor: color }}
-        />
-      ))}
-    </div>
-  );
-}
-
-// ============================================================
-// THEME SELECTOR GRID — keyboard accessible popover
-// ============================================================
-interface ThemeSelectorProps {
-  currentThemeId: string;
-  onSelect: (themeId: string) => void;
-  onClose: () => void;
-}
-
-function ThemeSelector({ currentThemeId, onSelect, onClose }: ThemeSelectorProps) {
-  const ref = useRef<HTMLDivElement>(null);
-
-  // Close on outside click
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        onClose();
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [onClose]);
-
-  // Close on Escape
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', handler);
-    return () => document.removeEventListener('keydown', handler);
-  }, [onClose]);
-
-  return (
-    <div
-      ref={ref}
-      role="dialog"
-      aria-label="Theme selector"
-      className="absolute right-0 top-full mt-2 z-50 w-72 rounded-2xl border p-3 animate-slide-up shadow-xl"
-      style={{
-        background: 'var(--surface-elevated)',
-        borderColor: 'var(--border)',
-        boxShadow: 'var(--shadow-lg)',
-      }}
-    >
-      <div className="flex items-center justify-between mb-3 px-1">
-        <span className="text-xs font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
-          Choose Theme
-        </span>
-        <button
-          onClick={onClose}
-          className="p-1 rounded-lg transition"
-          style={{ color: 'var(--text-muted)' }}
-          aria-label="Close theme selector"
-        >
-          <X className="w-3.5 h-3.5" />
-        </button>
-      </div>
-      <div className="grid grid-cols-1 gap-1">
-        {THEMES.map((theme: ThemeDefinition) => {
-          const isActive = theme.id === currentThemeId;
-          return (
-            <button
-              key={theme.id}
-              onClick={() => { onSelect(theme.id); onClose(); }}
-              className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-left transition group"
-              style={{
-                background: isActive ? 'var(--hover-bg)' : 'transparent',
-                color: 'var(--text-primary)',
-                outline: isActive ? `2px solid var(--focus-ring)` : 'none',
-                outlineOffset: '-2px',
-              }}
-              onMouseEnter={(e) => {
-                if (!isActive) (e.currentTarget as HTMLElement).style.background = 'var(--hover-bg)';
-              }}
-              onMouseLeave={(e) => {
-                if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent';
-              }}
-              aria-pressed={isActive}
-            >
-              <span className="text-base leading-none" aria-hidden="true">{theme.emoji}</span>
-              <span className="flex-grow text-xs font-semibold">{theme.name}</span>
-              <ThemeSwatch swatches={theme.swatches} />
-              {isActive && (
-                <Check className="w-3.5 h-3.5 ml-1 flex-shrink-0" style={{ color: 'var(--primary)' }} />
-              )}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
 export default function DashboardPage() {
   const router = useRouter();
 
@@ -221,6 +110,21 @@ export default function DashboardPage() {
   const [scheduledTasks, setScheduledTasks] = useState<ScheduledTask[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [debriefs, setDebriefs] = useState<WeeklyDebrief[]>([]);
+  const [monthlyReports, setMonthlyReports] = useState<any[]>([]);
+  const [generatingReport, setGeneratingReport] = useState(false);
+  const [moodTasks, setMoodTasks] = useState<Task[]>([]);
+  const [selectedMood, setSelectedMood] = useState<string>('');
+  const [loadingMood, setLoadingMood] = useState(false);
+  const [focusBlocks, setFocusBlocks] = useState<any[]>([]);
+  const [loadingFocus, setLoadingFocus] = useState(false);
+  const [showFocusModal, setShowFocusModal] = useState(false);
+  const [objectiveClarityWarning, setObjectiveClarityWarning] = useState<string | null>(null);
+  const [taskObjectiveClarityWarning, setTaskObjectiveClarityWarning] = useState<string | null>(null);
+  const [gapAnalysis, setGapAnalysis] = useState<string | null>(null);
+  const [taskGapAnalysis, setTaskGapAnalysis] = useState<string | null>(null);
+  const [suggestedBreakdown, setSuggestedBreakdown] = useState<any[]>([]);
+  const [loadingBreakdown, setLoadingBreakdown] = useState(false);
+  const [selectedBreakdownTasks, setSelectedBreakdownTasks] = useState<Record<number, boolean>>({});
 
   // Selected Detail views
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -232,10 +136,6 @@ export default function DashboardPage() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showAbout, setShowAbout] = useState(false);
-  const [showThemeSelector, setShowThemeSelector] = useState(false);
-
-  // Theme state
-  const [currentThemeId, setCurrentThemeId] = useState<string>(() => getInitialTheme());
 
   // AI Widget recommendations state
   const [aiActions, setAiActions] = useState<any[]>([]);
@@ -281,17 +181,6 @@ export default function DashboardPage() {
         Notification.requestPermission();
       }
     }
-  // Diagnostic theme attribute updater
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const el = document.getElementById('debug-theme-attr');
-      if (el) {
-        const attr = document.documentElement.getAttribute('data-theme') || 'none';
-        const classes = document.documentElement.className || 'none';
-        el.innerText = `ThemeAttr: ${attr} | Classes: ${classes}`;
-      }
-    }, 500);
-    return () => clearInterval(interval);
   }, []);
 
   const fetchInitialData = async () => {
@@ -305,11 +194,14 @@ export default function DashboardPage() {
       }
       setUser(userData.user);
 
-      // Apply initial theme from user profile (or use what's already applied)
-      const savedTheme = localStorage.getItem('theme');
-      const themeToApply = savedTheme || userData.user.theme || 'dark';
-      applyTheme(themeToApply);
-      setCurrentThemeId(themeToApply);
+      // Apply initial theme layout
+      if (userData.user.theme === 'light') {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+      } else {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+      }
 
       // 2. Fetch Dashboard items
       await refreshAllData();
@@ -326,12 +218,13 @@ export default function DashboardPage() {
 
   const refreshAllData = async () => {
     try {
-      const [projRes, habitRes, schedRes, notifRes, debriefRes] = await Promise.all([
+      const [projRes, habitRes, schedRes, notifRes, debriefRes, reportRes] = await Promise.all([
         fetch('/api/projects'),
         fetch('/api/habits'),
         fetch('/api/scheduled'),
         fetch('/api/notifications'),
-        fetch('/api/debriefs')
+        fetch('/api/debriefs'),
+        fetch('/api/reports')
       ]);
 
       const projs = await projRes.json();
@@ -339,6 +232,7 @@ export default function DashboardPage() {
       const sched = await schedRes.json();
       const notifs = await notifRes.json();
       const debs = await debriefRes.json();
+      const reps = await reportRes.json();
 
       // Trigger native notification for any newly fetched unread notification
       if (notifications && notifications.length > 0 && typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
@@ -365,6 +259,7 @@ export default function DashboardPage() {
       setScheduledTasks(sched);
       setNotifications(notifs);
       setDebriefs(debs);
+      setMonthlyReports(reps);
 
       // Refresh selected details state to pick up newest values
       if (selectedProject) {
@@ -412,32 +307,6 @@ export default function DashboardPage() {
     }
   };
 
-  // Handle theme switch
-  const handleThemeSelect = async (themeId: string) => {
-    applyTheme(themeId);
-    setCurrentThemeId(themeId);
-
-    // Persist to user profile in backend
-    if (user) {
-      try {
-        const res = await fetch('/api/user/profile', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: user.name,
-            email: user.email,
-            theme: themeId,
-            reminderTiming: user.reminderTiming,
-          }),
-        });
-        const data = await res.json();
-        if (res.ok) setUser(data);
-      } catch (e) {
-        console.error('Failed persisting theme to profile:', e);
-      }
-    }
-  };
-
   // Profile update
   const handleUpdateProfile = async (updates: { name: string; email: string; theme: string; reminderTiming: number }) => {
     try {
@@ -452,6 +321,15 @@ export default function DashboardPage() {
         return;
       }
       setUser(data);
+      
+      // Update theme classes
+      if (data.theme === 'light') {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+      } else {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+      }
       alert('Settings updated successfully!');
     } catch (e) {
       console.error(e);
@@ -640,21 +518,12 @@ export default function DashboardPage() {
     setPrioritizingProjId(projectId);
     try {
       const res = await fetch(`/api/projects/${projectId}/prioritize`, { method: 'POST' });
-      if (!res.ok) {
-        let message = 'Prioritization failed';
-        try {
-          const data = await res.json();
-          if (data?.error) message = data.error;
-        } catch {
-          // ignore json parse errors
-        }
-        throw new Error(message);
-      }
+      if (!res.ok) throw new Error('Prioritization failed');
       await refreshAllData();
       alert('AI task prioritization complete! Tasks have been reordered and AI priority badges applied.');
     } catch (e) {
       console.error(e);
-      alert(`AI prioritize failed: ${e instanceof Error ? e.message : 'Unknown error'}`);
+      alert('AI prioritize failed. Check server console.');
     } finally {
       setPrioritizingProjId(null);
     }
@@ -673,6 +542,165 @@ export default function DashboardPage() {
       alert('Failed generating debrief');
     } finally {
       setGeneratingDebrief(false);
+    }
+  };
+
+  // Generate Monthly Productivity Report (AI 16)
+  const handleGenerateMonthlyReport = async () => {
+    setGeneratingReport(true);
+    try {
+      const res = await fetch('/api/reports', { method: 'POST' });
+      if (!res.ok) throw new Error('Monthly report generation failed');
+      await refreshAllData();
+      alert('Monthly Productivity Report generated successfully!');
+    } catch (e) {
+      console.error(e);
+      alert('Failed generating monthly report');
+    } finally {
+      setGeneratingReport(false);
+    }
+  };
+
+  // Mood-Aware Reprioritizer (AI 14)
+  const handleMoodReprioritize = async (mood: string, projectId?: string) => {
+    setSelectedMood(mood);
+    setLoadingMood(true);
+    try {
+      const res = await fetch('/api/ai/mood-prioritize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mood, projectId })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Mood reprioritisation failed');
+      setMoodTasks(data.tasks || []);
+    } catch (e: any) {
+      console.error(e);
+      alert(e.message || 'Mood reprioritization failed');
+    } finally {
+      setLoadingMood(false);
+    }
+  };
+
+  // Focus Blocks Suggester (AI 12)
+  const handleFetchFocusBlocks = async () => {
+    setLoadingFocus(true);
+    try {
+      const res = await fetch('/api/ai/focus-blocks');
+      const data = await res.json();
+      if (!res.ok) throw new Error('Failed to fetch focus blocks');
+      setFocusBlocks(data.blocks || []);
+      setShowFocusModal(true);
+    } catch (e) {
+      console.error(e);
+      alert('Failed to get focus block suggestions.');
+    } finally {
+      setLoadingFocus(false);
+    }
+  };
+
+  // Objective Clarity Checker (AI 10)
+  const handleObjectiveClarityCheck = async (objective: string, isTask = false) => {
+    if (isTask) setTaskObjectiveClarityWarning(null);
+    else setObjectiveClarityWarning(null);
+
+    if (!objective || objective.trim().length === 0) return;
+
+    try {
+      const res = await fetch('/api/ai/check-clarity', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ objective })
+      });
+      const data = await res.json();
+      if (data.warning) {
+        if (isTask) setTaskObjectiveClarityWarning(data.warning);
+        else setObjectiveClarityWarning(data.warning);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // Result vs Objective Gap Analyser (AI 11)
+  const handleResultGapCheck = async (objective: string, result: string, isTask = false) => {
+    if (isTask) setTaskGapAnalysis(null);
+    else setGapAnalysis(null);
+
+    if (!objective || !result || result.trim().length === 0) return;
+
+    try {
+      const res = await fetch('/api/ai/analyse-gap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ objective, result })
+      });
+      const data = await res.json();
+      if (data.gap) {
+        if (isTask) setTaskGapAnalysis(data.gap);
+        else setGapAnalysis(data.gap);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // Smart Task Breakdown (AI 9)
+  const handleFetchSmartBreakdown = async (objective: string) => {
+    setLoadingBreakdown(true);
+    setSuggestedBreakdown([]);
+    setSelectedBreakdownTasks({});
+    try {
+      const res = await fetch('/api/ai/breakdown', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ objective })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to generate breakdown');
+      setSuggestedBreakdown(data.suggestions || []);
+      const checks: Record<number, boolean> = {};
+      (data.suggestions || []).forEach((_: any, idx: number) => {
+        checks[idx] = true;
+      });
+      setSelectedBreakdownTasks(checks);
+    } catch (e: any) {
+      console.error(e);
+      alert(e.message || 'Failed task breakdown generation.');
+    } finally {
+      setLoadingBreakdown(false);
+    }
+  };
+
+  const handleCreateSuggestedTasks = async (projectId: string) => {
+    const tasksToCreate = suggestedBreakdown.filter((_, idx) => selectedBreakdownTasks[idx]);
+    if (tasksToCreate.length === 0) {
+      alert('Please check at least one suggested task.');
+      return;
+    }
+
+    setLoadingBreakdown(true);
+    try {
+      for (const t of tasksToCreate) {
+        await fetch('/api/tasks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            projectId,
+            name: `${t.name} (${t.estimate})`,
+            objective: `Auto-suggested sub-task for project goal.`
+          })
+        });
+      }
+      setSuggestedBreakdown([]);
+      setSelectedBreakdownTasks({});
+      await refreshAllData();
+      alert('Suggested tasks added to project successfully!');
+    } catch (e) {
+      console.error(e);
+      alert('Failed adding suggested tasks.');
+    } finally {
+      setLoadingBreakdown(false);
     }
   };
 
@@ -780,114 +808,43 @@ export default function DashboardPage() {
   // Render Loader
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center" style={{ background: 'var(--bg-base)', color: 'var(--text-primary)' }}>
+      <div className="min-h-screen bg-neutral-950 flex flex-col items-center justify-center text-white">
         <Sparkles className="w-12 h-12 text-brand-purple animate-pulse mb-4" />
-        <p className="text-sm font-semibold tracking-wider uppercase" style={{ color: 'var(--text-muted)' }}>Loading Taskflow...</p>
+        <p className="text-sm font-semibold tracking-wider uppercase text-neutral-400">Loading Taskflow...</p>
       </div>
     );
   }
 
   const unreadNotificationsCount = notifications.filter(n => !n.read).length;
 
-  // ──────────────────────────────────────────────
-  // Inline style helpers for themed Tailwind classes
-  // that would otherwise be hardcoded neutrals
-  // ──────────────────────────────────────────────
-  const S = {
-    // Surfaces
-    bgBase: { background: 'var(--bg-base)' },
-    surface: { background: 'var(--surface)' },
-    surfaceElevated: { background: 'var(--surface-elevated)' },
-    // Text
-    textPrimary: { color: 'var(--text-primary)' },
-    textSecondary: { color: 'var(--text-secondary)' },
-    textMuted: { color: 'var(--text-muted)' },
-    // Borders
-    border: { borderColor: 'var(--border)' },
-    borderSubtle: { borderColor: 'var(--border-subtle)' },
-    // Cards with border
-    card: { background: 'var(--surface)', borderColor: 'var(--border)' },
-    cardElevated: { background: 'var(--surface-elevated)', borderColor: 'var(--border)' },
-    // Panel (overlay panels)
-    panel: { background: 'var(--surface)', borderColor: 'var(--border)' },
-    // Input
-    input: { background: 'var(--surface-elevated)', borderColor: 'var(--border)', color: 'var(--text-primary)' },
-    // Overlay backdrop
-    overlay: { background: 'var(--overlay)' },
-  };
-
   return (
-    <div
-      className="flex-grow flex flex-col max-w-5xl mx-auto w-full min-h-screen relative pb-24 shadow-2xl"
-      style={{ background: 'var(--bg-base)', color: 'var(--text-primary)' }}
-    >
+    <div className="flex-grow flex flex-col bg-neutral-950 text-neutral-100 max-w-5xl mx-auto w-full min-h-screen relative pb-24 shadow-2xl">
       {/* 1. TOP BAR */}
-      <header
-        className="sticky top-0 z-30 h-16 border-b flex items-center justify-between px-6"
-        style={{
-          borderColor: 'var(--border)',
-          background: 'color-mix(in srgb, var(--bg-base) 80%, transparent)',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
-        }}
-      >
+      <header className="sticky top-0 z-30 h-16 border-b border-neutral-900 bg-neutral-950/80 backdrop-blur-md flex items-center justify-between px-6">
         {/* Brand */}
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => { setSelectedProject(null); setSelectedHabit(null); setSelectedScheduled(null); }}>
           <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-purple to-brand-teal flex items-center justify-center font-bold text-white shadow-md shadow-purple-500/20">
             T
           </div>
-          <span className="font-bold text-lg tracking-tight" style={{ color: 'var(--text-primary)' }}>
+          <span className="font-bold text-lg tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-neutral-50 to-neutral-200">
             Taskflow
-          </span>
-          <span className="text-[10px] text-red-500 font-mono px-2 py-0.5 rounded border border-red-500/30" id="debug-theme-attr">
-            ThemeAttr: Loading
           </span>
         </div>
 
         {/* Actions header */}
-        <div className="flex items-center gap-3">
-          {/* Theme Picker Button */}
-          <div className="relative">
-            <button
-              onClick={() => setShowThemeSelector(prev => !prev)}
-              className="p-2 rounded-lg transition flex items-center gap-1.5"
-              style={{ color: 'var(--text-muted)' }}
-              title={`Theme: ${currentThemeId}`}
-              aria-label="Open theme selector"
-              aria-expanded={showThemeSelector}
-              aria-haspopup="dialog"
-              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--hover-bg)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)'; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = ''; (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; }}
-            >
-              <Palette className="w-5 h-5" />
-            </button>
-            {showThemeSelector && (
-              <ThemeSelector
-                currentThemeId={currentThemeId}
-                onSelect={handleThemeSelect}
-                onClose={() => setShowThemeSelector(false)}
-              />
-            )}
-          </div>
-
-          <button
-            onClick={() => setShowAbout(true)}
-            className="p-2 rounded-lg transition"
-            style={{ color: 'var(--text-muted)' }}
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => setShowAbout(true)} 
+            className="p-2 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-900 transition"
             title="About Taskflow"
-            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--hover-bg)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)'; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = ''; (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; }}
           >
             <Info className="w-5 h-5" />
           </button>
 
-          <button
+          <button 
             onClick={() => setShowNotifications(true)}
-            className="p-2 rounded-lg transition relative"
-            style={{ color: 'var(--text-muted)' }}
+            className="p-2 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-900 transition relative"
             title="Notifications"
-            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--hover-bg)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)'; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = ''; (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; }}
           >
             <Bell className="w-5 h-5" />
             {unreadNotificationsCount > 0 && (
@@ -897,10 +854,9 @@ export default function DashboardPage() {
             )}
           </button>
 
-          <button
+          <button 
             onClick={() => setShowProfile(true)}
-            className="w-8 h-8 rounded-full border flex items-center justify-center font-semibold text-xs tracking-wider uppercase hover:scale-105 transition"
-            style={{ background: 'var(--surface-elevated)', borderColor: 'var(--border)', color: 'var(--secondary)' }}
+            className="w-8 h-8 rounded-full bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 flex items-center justify-center font-semibold text-xs tracking-wider uppercase text-brand-teal hover:scale-105 transition"
             title="Profile & Settings"
           >
             {user?.name.slice(0, 2) || 'JD'}
@@ -913,56 +869,118 @@ export default function DashboardPage() {
         
         {/* AI Recommendations persisted widget on Dashboard */}
         {activeTab === 'projects' && !selectedProject && (
-          <section
-            className="glass p-5 rounded-2xl border shadow-xl flex flex-col md:flex-row justify-between gap-6 relative overflow-hidden"
-            style={{ borderColor: 'var(--border)' }}
-          >
-            <div className="absolute top-0 right-0 w-[40%] h-[100%] bg-brand-amber/5 blur-[60px] pointer-events-none" />
-            <div className="space-y-3 max-w-xl">
-              <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-brand-amber/15 text-brand-amber text-[10px] font-bold uppercase tracking-wider">
-                <Brain className="w-3.5 h-3.5" /> AI Productivity Coach
-              </div>
-              {aiBestAction ? (
-                <div>
-                  <h3 className="text-base font-bold mb-1 flex items-center gap-1.5" style={{ color: 'var(--text-primary)' }}>
-                    <Sparkles className="w-4 h-4 text-brand-amber" />
-                    {aiBestAction.name}
-                  </h3>
-                  <p className="text-xs leading-relaxed mb-1" style={{ color: 'var(--text-secondary)' }}>
-                    <span className="font-semibold text-brand-teal">Reason:</span> {aiBestAction.reason}
-                  </p>
-                  <p className="text-[11px] italic" style={{ color: 'var(--text-muted)' }}>
-                    {aiBestAction.explanation}
-                  </p>
+          <div className="space-y-6">
+            <section className="glass p-5 rounded-2xl bg-neutral-900/25 border-neutral-900 shadow-xl flex flex-col md:flex-row justify-between gap-6 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-[40%] h-[100%] bg-brand-amber/5 blur-[60px] pointer-events-none" />
+              <div className="space-y-3 max-w-xl">
+                <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-brand-amber/15 text-brand-amber text-[10px] font-bold uppercase tracking-wider">
+                  <Brain className="w-3.5 h-3.5" /> AI Productivity Coach
                 </div>
-              ) : (
-                <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>Loading your customized AI advice widget...</p>
-              )}
-            </div>
+                {aiBestAction ? (
+                  <div>
+                    <h3 className="text-base font-bold text-white mb-1 flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4 text-brand-amber" />
+                      {aiBestAction.name}
+                    </h3>
+                    <p className="text-xs text-neutral-400 leading-relaxed mb-1">
+                      <span className="font-semibold text-brand-teal">Reason:</span> {aiBestAction.reason}
+                    </p>
+                    <p className="text-[11px] italic text-neutral-500">
+                      {aiBestAction.explanation}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-neutral-400">Loading your customized AI advice widget...</p>
+                )}
 
-            <div className="flex flex-col gap-2 shrink-0 md:justify-center">
-              <button
-                onClick={fetchAiRecommendations}
-                disabled={loadingAi}
-                className="px-4 py-2 text-xs font-semibold rounded-lg border transition disabled:opacity-50"
-                style={{ background: 'var(--surface-elevated)', color: 'var(--text-secondary)', borderColor: 'var(--border)' }}
-                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--hover-bg)'; }}
-                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--surface-elevated)'; }}
-              >
-                {loadingAi ? 'Calculating...' : 'Recalculate Focus'}
-              </button>
-              <button
-                onClick={() => {
-                  alert(`Today's Top 3 Planned Actions:\n\n` + 
-                    aiActions.map((a, i) => `${i+1}. ${a.name} (${a.estimate})\n   Reason: ${a.reason}`).join('\n\n')
-                  );
-                }}
-                className="px-4 py-2 text-xs font-semibold rounded-lg bg-gradient-to-r from-brand-amber to-brand-coral text-white transition hover:opacity-95"
-              >
-                Show Today's Top 3
-              </button>
-            </div>
-          </section>
+                {/* Mood Selector Widget (AI 14) */}
+                <div className="pt-3 border-t border-neutral-900/60">
+                  <span className="text-[10px] font-bold uppercase text-neutral-400 tracking-wider block mb-2">Select Your Energy Level Today</span>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {['high', 'medium', 'low', 'creative', 'analytical'].map((m) => (
+                      <button
+                        key={m}
+                        onClick={() => handleMoodReprioritize(m)}
+                        className={`px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider transition ${
+                          selectedMood === m 
+                            ? 'bg-brand-amber text-black' 
+                            : 'bg-neutral-900 text-neutral-400 hover:text-white border border-neutral-800'
+                        }`}
+                      >
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2 shrink-0 md:justify-center">
+                <button 
+                  onClick={fetchAiRecommendations}
+                  disabled={loadingAi}
+                  className="px-4 py-2 text-xs font-semibold rounded-lg bg-neutral-900 hover:bg-neutral-800 text-neutral-300 border border-neutral-800 transition disabled:opacity-50"
+                >
+                  {loadingAi ? 'Calculating...' : 'Recalculate Focus'}
+                </button>
+                <button 
+                  onClick={() => {
+                    alert(`Today's Top 3 Planned Actions:\n\n` + 
+                      aiActions.map((a, i) => `${i+1}. ${a.name} (${a.estimate})\n   Reason: ${a.reason}`).join('\n\n')
+                    );
+                  }}
+                  className="px-4 py-2 text-xs font-semibold rounded-lg bg-gradient-to-r from-brand-amber to-brand-coral text-white transition hover:opacity-95"
+                >
+                  Show Today's Top 3
+                </button>
+                {/* Focus Block Suggester (AI 12) */}
+                <button 
+                  onClick={handleFetchFocusBlocks}
+                  disabled={loadingFocus}
+                  className="px-4 py-2 text-xs font-semibold rounded-lg bg-brand-teal/10 hover:bg-brand-teal/20 text-brand-teal border border-brand-teal/20 transition disabled:opacity-50 text-left"
+                >
+                  {loadingFocus ? 'Generating schedule...' : 'Suggest Daily Schedule'}
+                </button>
+              </div>
+            </section>
+
+            {/* Energy-Aligned Agenda Display */}
+            {selectedMood && (
+              <div className="glass p-5 rounded-2xl bg-neutral-900/15 border-neutral-900/50 space-y-3 animate-slide-up">
+                <div className="flex justify-between items-center border-b border-neutral-900 pb-2">
+                  <h4 className="text-sm font-bold text-white flex items-center gap-1.5">
+                    <Sparkles className="w-4 h-4 text-brand-amber animate-spin" />
+                    Today's Energy-Aligned Agenda ({selectedMood.toUpperCase()})
+                  </h4>
+                  <button onClick={() => { setSelectedMood(''); setMoodTasks([]); }} className="text-xs text-neutral-500 hover:text-white">
+                    Clear Agenda
+                  </button>
+                </div>
+                
+                {loadingMood ? (
+                  <p className="text-xs text-neutral-500 py-2">Consulting coach model...</p>
+                ) : moodTasks.length === 0 ? (
+                  <p className="text-xs text-neutral-500 py-2">No pending tasks found. All clear!</p>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-[11px] text-neutral-400 italic">
+                      Coach advice: optimized sequence based on {selectedMood} energy level.
+                    </p>
+                    {moodTasks.map((t, idx) => (
+                      <div key={t.id} className="p-3 bg-neutral-950 rounded-lg border border-neutral-900 flex justify-between items-center text-xs">
+                        <div className="space-y-0.5">
+                          <span className="font-semibold text-white block">{idx + 1}. {t.name}</span>
+                          {t.priority && (
+                            <span className="text-[9px] uppercase tracking-wider text-neutral-500 font-bold">Priority: {t.priority}</span>
+                          )}
+                        </div>
+                        <span className="text-[10px] text-brand-teal font-semibold">Ready</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         )}
 
         {/* Dynamic routing of views based on active bottom tab */}
@@ -977,10 +995,10 @@ export default function DashboardPage() {
               <div className="space-y-6">
                 <div className="flex justify-between items-center">
                   <div>
-                    <h2 className="text-xl font-extrabold tracking-tight" style={{ color: 'var(--text-primary)' }}>Active Projects</h2>
-                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Establish objectives and analyze lessons learned</p>
+                    <h2 className="text-xl font-extrabold tracking-tight">Active Projects</h2>
+                    <p className="text-xs text-neutral-400">Establish objectives and analyze lessons learned</p>
                   </div>
-                  <button
+                  <button 
                     onClick={() => setModalType('new-project')}
                     className="px-4 py-2 text-xs font-semibold rounded-lg bg-gradient-to-r from-brand-purple to-brand-purple-dark text-white flex items-center gap-1.5 hover:scale-102 hover:opacity-95 transition"
                   >
@@ -990,41 +1008,53 @@ export default function DashboardPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {projects.map(project => (
-                    <div
+                    <div 
                       key={project.id}
                       onClick={() => { setSelectedProject(project); setSelectedTask(null); }}
-                      className="glass p-5 rounded-xl border flex flex-col justify-between h-44 transition group cursor-pointer"
-                      style={{ borderColor: 'var(--border)' }}
-                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'rgba(168,85,247,0.3)'; }}
-                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; }}
+                      className="glass p-5 rounded-xl border-neutral-900 bg-neutral-900/10 hover:border-brand-purple/30 hover:bg-neutral-900/20 cursor-pointer flex flex-col justify-between h-44 transition group"
                     >
                       <div className="space-y-2">
                         <div className="flex justify-between items-start">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                            project.status === 'done' ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-900/50' :
-                            project.status === 'in progress' ? 'bg-brand-purple/20 text-brand-purple-light border border-brand-purple/30' :
-                            'border'
-                          }`}
-                            style={project.status !== 'done' && project.status !== 'in progress' ? { background: 'var(--surface-elevated)', color: 'var(--text-muted)', borderColor: 'var(--border)' } : {}}
-                          >
-                            {project.status}
-                          </span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                              project.status === 'done' ? 'bg-emerald-950 text-emerald-400 border border-emerald-900' :
+                              project.status === 'in progress' ? 'bg-brand-purple/20 text-brand-purple-light border border-brand-purple/30' :
+                              'bg-neutral-800 text-neutral-400 border border-neutral-700'
+                            }`}>
+                              {project.status}
+                            </span>
+                            {(project as any).healthScore !== undefined && (
+                              <span
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  alert(`${project.name} Health Details:\n\n${(project as any).healthDetails}`);
+                                }}
+                                className={`px-2 py-0.5 rounded text-[10px] font-bold border transition hover:opacity-85 cursor-help ${
+                                  (project as any).healthScore >= 70 ? 'bg-emerald-950/40 text-emerald-400 border-emerald-950' :
+                                  (project as any).healthScore >= 40 ? 'bg-amber-950/40 text-brand-amber border-amber-950' :
+                                  'bg-red-950/40 text-red-400 border-red-950'
+                                }`}
+                              >
+                                Health: {(project as any).healthScore}%
+                              </span>
+                            )}
+                          </div>
                           {project.deadline && (
-                            <span className="text-[10px] flex items-center gap-1" style={{ color: 'var(--text-muted)' }}>
+                            <span className="text-[10px] text-neutral-500 flex items-center gap-1">
                               <CalendarIcon className="w-3 h-3" />
                               {new Date(project.deadline).toLocaleDateString()}
                             </span>
                           )}
                         </div>
-                        <h3 className="font-bold text-base group-hover:text-brand-purple-light transition" style={{ color: 'var(--text-primary)' }}>
+                        <h3 className="font-bold text-base text-white group-hover:text-brand-purple-light transition">
                           {project.name}
                         </h3>
-                        <p className="text-xs line-clamp-2 leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+                        <p className="text-xs text-neutral-400 line-clamp-2 leading-relaxed">
                           {project.objective || 'No objective set yet. Add reflection.'}
                         </p>
                       </div>
 
-                      <div className="text-[11px] pt-2 border-t flex justify-between items-center" style={{ color: 'var(--text-muted)', borderColor: 'var(--border)' }}>
+                      <div className="text-[11px] text-neutral-500 pt-2 border-t border-neutral-900 flex justify-between items-center">
                         <span>{project.tasks.length} tasks nested</span>
                         <span className="text-brand-purple group-hover:translate-x-0.5 transition flex items-center gap-0.5">
                           View details <ChevronRight className="w-3.5 h-3.5" />
@@ -1038,25 +1068,24 @@ export default function DashboardPage() {
               // Project details view
               <div className="space-y-6 animate-slide-up">
                 {/* Back button */}
-                <div className="flex items-center justify-between border-b pb-4" style={{ borderColor: 'var(--border)' }}>
-                  <button
+                <div className="flex items-center justify-between border-b border-neutral-900 pb-4">
+                  <button 
                     onClick={() => { setSelectedProject(null); setSelectedTask(null); }}
-                    className="text-xs font-semibold flex items-center gap-1 transition hover:text-brand-purple-light"
-                    style={{ color: 'var(--text-secondary)' }}
+                    className="text-xs font-semibold text-neutral-400 hover:text-white flex items-center gap-1 transition"
                   >
                     <ChevronLeft className="w-4 h-4" /> Back to Projects
                   </button>
                   <div className="flex items-center gap-2">
-                    <button
+                    <button 
                       onClick={() => handlePrioritizeTasks(selectedProject.id)}
                       disabled={prioritizingProjId === selectedProject.id}
                       className="px-3.5 py-1.5 rounded-lg border border-brand-amber bg-brand-amber/10 text-brand-amber text-xs font-semibold flex items-center gap-1.5 hover:bg-brand-amber/20 transition disabled:opacity-50"
                     >
                       <Brain className="w-3.5 h-3.5" /> {prioritizingProjId === selectedProject.id ? 'Reordering...' : 'Prioritize with AI'}
                     </button>
-                    <button
+                    <button 
                       onClick={() => handleDeleteEntity('project', selectedProject.id)}
-                      className="p-1.5 rounded-lg border border-red-950/70 text-red-400 hover:bg-red-950/40 transition"
+                      className="p-1.5 rounded-lg border border-red-950 text-red-400 hover:bg-red-950/40 transition"
                       title="Delete Project"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -1067,12 +1096,11 @@ export default function DashboardPage() {
                 {/* Project Header details */}
                 <div className="space-y-2">
                   <div className="flex items-center gap-3">
-                    <h2 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{selectedProject.name}</h2>
+                    <h2 className="text-2xl font-bold text-white">{selectedProject.name}</h2>
                     <select
                       value={selectedProject.status}
                       onChange={(e) => handleSaveReflections('project', selectedProject.id, { status: e.target.value })}
-                      className="text-xs rounded border px-2 py-1 outline-none"
-                      style={{ ...S.input }}
+                      className="text-xs rounded border border-neutral-800 bg-neutral-900 px-2 py-1 text-white outline-none"
                     >
                       <option value="planning">planning</option>
                       <option value="in progress">in progress</option>
@@ -1080,9 +1108,9 @@ export default function DashboardPage() {
                     </select>
                   </div>
                   {selectedProject.deadline && (
-                    <p className="text-xs flex items-center gap-1" style={{ color: 'var(--text-secondary)' }}>
+                    <p className="text-xs text-neutral-400 flex items-center gap-1">
                       <CalendarIcon className="w-3.5 h-3.5 text-brand-purple" />
-                      Deadline: <span className="font-medium" style={{ color: 'var(--text-primary)' }}>{new Date(selectedProject.deadline).toLocaleDateString()}</span> (purple calendar dot)
+                      Deadline: <span className="text-white font-medium">{new Date(selectedProject.deadline).toLocaleDateString()}</span> (purple calendar dot)
                     </p>
                   )}
                 </div>
@@ -1090,35 +1118,49 @@ export default function DashboardPage() {
                 {/* 4 REFLECTIVE FIELDS FOR PROJECT */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* Objective */}
-                  <div className="p-4 rounded-xl border space-y-1.5" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
+                  <div className="p-4 rounded-xl border border-neutral-900 bg-neutral-950 space-y-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-wider text-brand-purple flex items-center gap-1">
                       <Folder className="w-3 h-3" /> Objective — what we want to achieve
                     </label>
                     <textarea
                       defaultValue={selectedProject.objective}
-                      onBlur={(e) => handleSaveReflections('project', selectedProject.id, { objective: e.target.value })}
+                      onBlur={(e) => {
+                        handleSaveReflections('project', selectedProject.id, { objective: e.target.value });
+                        handleObjectiveClarityCheck(e.target.value, false);
+                      }}
                       placeholder="Add target project goal..."
-                      className="w-full text-xs bg-transparent border-0 resize-none focus:ring-0 outline-none h-16 leading-relaxed"
-                      style={{ color: 'var(--text-secondary)' }}
+                      className="w-full text-xs bg-transparent border-0 resize-none focus:ring-0 outline-none text-neutral-300 h-16 leading-relaxed"
                     />
+                    {objectiveClarityWarning && (
+                      <span className="text-[10px] text-brand-amber font-semibold block pt-1 leading-normal border-t border-neutral-900">
+                        ⚠️ Objective Nudge: {objectiveClarityWarning}
+                      </span>
+                    )}
                   </div>
 
                   {/* Result */}
-                  <div className="p-4 rounded-xl border space-y-1.5" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
+                  <div className="p-4 rounded-xl border border-neutral-900 bg-neutral-950 space-y-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1">
                       <Check className="w-3 h-3" /> Result — what we actually accomplished
                     </label>
                     <textarea
                       defaultValue={selectedProject.result}
-                      onBlur={(e) => handleSaveReflections('project', selectedProject.id, { result: e.target.value })}
+                      onBlur={(e) => {
+                        handleSaveReflections('project', selectedProject.id, { result: e.target.value });
+                        handleResultGapCheck(selectedProject.objective, e.target.value, false);
+                      }}
                       placeholder="Log final project outcome..."
-                      className="w-full text-xs bg-transparent border-0 resize-none focus:ring-0 outline-none h-16 leading-relaxed"
-                      style={{ color: 'var(--text-secondary)' }}
+                      className="w-full text-xs bg-transparent border-0 resize-none focus:ring-0 outline-none text-neutral-300 h-16 leading-relaxed"
                     />
+                    {gapAnalysis && (
+                      <span className="text-[10px] text-emerald-400 font-semibold block pt-1 leading-normal border-t border-neutral-900">
+                        💡 Gap Analysis: {gapAnalysis}
+                      </span>
+                    )}
                   </div>
 
                   {/* Lesson */}
-                  <div className="p-4 rounded-xl border space-y-1.5" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
+                  <div className="p-4 rounded-xl border border-neutral-900 bg-neutral-950 space-y-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-wider text-brand-amber flex items-center gap-1">
                       <Sparkles className="w-3 h-3" /> Lesson — what we learned from it
                     </label>
@@ -1126,13 +1168,12 @@ export default function DashboardPage() {
                       defaultValue={selectedProject.lesson}
                       onBlur={(e) => handleSaveReflections('project', selectedProject.id, { lesson: e.target.value })}
                       placeholder="Spot learnings and growth patterns..."
-                      className="w-full text-xs bg-transparent border-0 resize-none focus:ring-0 outline-none h-16 leading-relaxed"
-                      style={{ color: 'var(--text-secondary)' }}
+                      className="w-full text-xs bg-transparent border-0 resize-none focus:ring-0 outline-none text-neutral-300 h-16 leading-relaxed"
                     />
                   </div>
 
                   {/* Compromise */}
-                  <div className="p-4 rounded-xl border space-y-1.5" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}>
+                  <div className="p-4 rounded-xl border border-neutral-900 bg-neutral-950 space-y-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-wider text-brand-coral flex items-center gap-1">
                       <AlertTriangle className="w-3 h-3" /> Compromise — what we sacrificed
                     </label>
@@ -1143,11 +1184,10 @@ export default function DashboardPage() {
                         handleCompromiseBlur(e.target.value);
                       }}
                       placeholder="Specify shortcuts or delayed scope..."
-                      className="w-full text-xs bg-transparent border-0 resize-none focus:ring-0 outline-none h-16 leading-relaxed"
-                      style={{ color: 'var(--text-secondary)' }}
+                      className="w-full text-xs bg-transparent border-0 resize-none focus:ring-0 outline-none text-neutral-300 h-16 leading-relaxed"
                     />
                     {compromiseWarning && (
-                      <span className="text-[10px] text-brand-amber font-semibold block pt-1 leading-normal border-t" style={{ borderColor: 'var(--border)' }}>
+                      <span className="text-[10px] text-brand-amber font-semibold block pt-1 leading-normal border-t border-neutral-900">
                         ⚠️ {compromiseWarning}
                       </span>
                     )}
@@ -1155,40 +1195,81 @@ export default function DashboardPage() {
                 </div>
 
                 {/* PROJECT NESTED TASKS */}
-                <div className="border-t pt-6 space-y-4" style={{ borderColor: 'var(--border)' }}>
+                <div className="border-t border-neutral-900 pt-6 space-y-4">
                   <div className="flex justify-between items-center">
-                    <h3 className="font-bold text-base" style={{ color: 'var(--text-primary)' }}>Project Tasks</h3>
-                    <button
-                      onClick={() => setModalType('new-task')}
-                      className="px-3 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1 transition"
-                      style={{ borderColor: 'var(--border)', color: 'var(--text-secondary)', background: 'var(--surface)' }}
-                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--hover-bg)'; }}
-                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--surface)'; }}
-                    >
-                      <Plus className="w-3.5 h-3.5" /> Add Task
-                    </button>
+                    <h3 className="font-bold text-base text-white">Project Tasks</h3>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleFetchSmartBreakdown(selectedProject.objective || selectedProject.name)}
+                        disabled={loadingBreakdown}
+                        className="px-3 py-1.5 rounded-lg border border-brand-teal/20 bg-brand-teal/5 hover:bg-brand-teal/10 text-xs font-semibold text-brand-teal flex items-center gap-1.5 transition disabled:opacity-50"
+                      >
+                        <Brain className="w-3.5 h-3.5" /> {loadingBreakdown ? 'Breaking down...' : 'AI Suggest Tasks'}
+                      </button>
+                      <button
+                        onClick={() => setModalType('new-task')}
+                        className="px-3 py-1.5 rounded-lg border border-neutral-800 hover:bg-neutral-900 text-xs font-semibold text-neutral-300 flex items-center gap-1 transition"
+                      >
+                        <Plus className="w-3.5 h-3.5" /> Add Task
+                      </button>
+                    </div>
                   </div>
+
+                  {/* Suggested Tasks Panel (AI 9) */}
+                  {suggestedBreakdown.length > 0 && (
+                    <div className="p-5 rounded-2xl border border-brand-teal/20 bg-brand-teal/5 space-y-4 animate-slide-up">
+                      <div className="flex justify-between items-center border-b border-brand-teal/10 pb-2">
+                        <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                          <Sparkles className="w-4 h-4 text-brand-teal" /> AI Task Suggestions
+                        </span>
+                        <button 
+                          onClick={() => setSuggestedBreakdown([])} 
+                          className="text-xs text-neutral-500 hover:text-white"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+
+                      <div className="space-y-2.5">
+                        {suggestedBreakdown.map((item, idx) => (
+                          <div key={idx} className="flex items-center justify-between text-xs p-2.5 bg-neutral-950/40 rounded-xl border border-neutral-900">
+                            <label className="flex items-center gap-2 cursor-pointer text-neutral-300 font-medium">
+                              <input 
+                                type="checkbox" 
+                                checked={!!selectedBreakdownTasks[idx]}
+                                onChange={(e) => setSelectedBreakdownTasks({ ...selectedBreakdownTasks, [idx]: e.target.checked })}
+                                className="rounded border-neutral-850 bg-neutral-900 text-brand-teal focus:ring-brand-teal w-4 h-4"
+                              />
+                              {item.name}
+                            </label>
+                            <span className="text-[10px] text-neutral-500 bg-neutral-900 px-2 py-0.5 rounded-full border border-neutral-800">
+                              Est: {item.estimate}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <button
+                        onClick={() => handleCreateSuggestedTasks(selectedProject.id)}
+                        className="w-full py-2 bg-brand-teal text-black font-extrabold text-xs rounded-xl hover:opacity-95 transition"
+                      >
+                        Create Selected Tasks ({Object.values(selectedBreakdownTasks).filter(Boolean).length})
+                      </button>
+                    </div>
+                  )}
 
                   {/* Tasks Table/List */}
                   <div className="space-y-2">
                     {selectedProject.tasks.length === 0 ? (
-                      <p className="text-xs py-4 text-center" style={{ color: 'var(--text-muted)' }}>No tasks inside this project yet. Use AI prioritizer after adding tasks.</p>
+                      <p className="text-xs text-neutral-500 py-4 text-center">No tasks inside this project yet. Use AI prioritizer after adding tasks.</p>
                     ) : (
                       selectedProject.tasks.map(task => (
-                        <div
+                        <div 
                           key={task.id}
-                          className={`p-4 rounded-xl border flex flex-col md:flex-row md:items-center justify-between gap-4 transition cursor-pointer`}
-                          style={{
-                            borderColor: selectedTask?.id === task.id ? 'var(--primary)' : 'var(--border)',
-                            background: selectedTask?.id === task.id ? 'color-mix(in srgb, var(--primary) 8%, var(--surface))' : 'transparent',
-                          }}
+                          className={`p-4 rounded-xl border flex flex-col md:flex-row md:items-center justify-between gap-4 transition cursor-pointer ${
+                            selectedTask?.id === task.id ? 'border-brand-purple bg-neutral-900/30' : 'border-neutral-900 hover:border-neutral-800'
+                          }`}
                           onClick={() => setSelectedTask(task)}
-                          onMouseEnter={(e) => {
-                            if (selectedTask?.id !== task.id) (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-subtle)';
-                          }}
-                          onMouseLeave={(e) => {
-                            if (selectedTask?.id !== task.id) (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)';
-                          }}
                         >
                           <div className="space-y-2 flex-grow">
                             <div className="flex items-center gap-2 flex-wrap">
@@ -1199,26 +1280,22 @@ export default function DashboardPage() {
                                   handleSaveReflections('task', task.id, { status: task.status === 'done' ? 'todo' : 'done' });
                                 }}
                                 className={`w-5 h-5 rounded flex items-center justify-center border transition ${
-                                  task.status === 'done' ? 'bg-brand-purple border-brand-purple text-white' : ''
+                                  task.status === 'done' ? 'bg-brand-purple border-brand-purple text-white' : 'border-neutral-700 hover:border-neutral-500'
                                 }`}
-                                style={task.status !== 'done' ? { borderColor: 'var(--border)' } : {}}
                               >
                                 {task.status === 'done' && <Check className="w-3.5 h-3.5" />}
                               </button>
                               
-                              <span className={`font-bold text-sm ${task.status === 'done' ? 'line-through' : ''}`}
-                                style={{ color: task.status === 'done' ? 'var(--text-muted)' : 'var(--text-secondary)' }}>
+                              <span className={`font-bold text-sm text-neutral-200 ${task.status === 'done' ? 'line-through text-neutral-500' : ''}`}>
                                 {task.name}
                               </span>
 
                               {/* AI priority badges */}
                               <span className={`px-2 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wider ${
-                                task.priority === 'high' ? 'bg-red-950/60 text-red-400 border border-red-900/50' :
-                                task.priority === 'medium' ? 'bg-amber-950/60 text-brand-amber border border-amber-900/50' :
-                                'border'
-                              }`}
-                                style={task.priority !== 'high' && task.priority !== 'medium' ? { background: 'var(--surface-elevated)', color: 'var(--text-muted)', borderColor: 'var(--border)' } : {}}
-                              >
+                                task.priority === 'high' ? 'bg-red-950 text-red-400 border border-red-900' :
+                                task.priority === 'medium' ? 'bg-amber-950 text-brand-amber border border-amber-900' :
+                                'bg-slate-900 text-slate-400 border border-slate-700'
+                              }`}>
                                 {task.priority} Priority
                               </span>
                             </div>
@@ -1237,8 +1314,7 @@ export default function DashboardPage() {
                                 {new Date(task.deadline).toLocaleDateString()}
                               </span>
                             )}
-                            <ChevronRight className={`w-4 h-4 transition-transform ${selectedTask?.id === task.id ? 'rotate-90' : ''}`}
-                              style={{ color: 'var(--text-muted)' }} />
+                            <ChevronRight className={`w-4 h-4 text-neutral-600 transition-transform ${selectedTask?.id === task.id ? 'rotate-90' : ''}`} />
                           </div>
                         </div>
                       ))
@@ -1248,20 +1324,20 @@ export default function DashboardPage() {
 
                 {/* TASK DETAIL RETRO DRAWER (visible if selected) */}
                 {selectedTask && (
-                  <div className="border p-5 rounded-2xl space-y-4 animate-slide-up" style={{ borderColor: 'var(--border)', background: 'color-mix(in srgb, var(--surface) 50%, transparent)' }}>
-                    <div className="flex justify-between items-center border-b pb-3" style={{ borderColor: 'var(--border)' }}>
+                  <div className="border border-neutral-800 bg-neutral-900/10 p-5 rounded-2xl space-y-4 animate-slide-up">
+                    <div className="flex justify-between items-center border-b border-neutral-900 pb-3">
                       <div>
                         <h4 className="text-xs text-brand-coral font-bold uppercase tracking-wider">Active Task Audit</h4>
-                        <p className="font-bold" style={{ color: 'var(--text-primary)' }}>{selectedTask.name}</p>
+                        <p className="font-bold text-white">{selectedTask.name}</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <button
+                        <button 
                           onClick={() => handleDeleteEntity('task', selectedTask.id)}
-                          className="text-xs text-red-400 hover:text-red-300 font-semibold px-2 py-1 border border-red-950/70 rounded-lg"
+                          className="text-xs text-red-400 hover:text-red-300 font-semibold px-2 py-1 border border-red-950 rounded-lg"
                         >
                           Delete Task
                         </button>
-                        <button onClick={() => setSelectedTask(null)} className="p-1.5 rounded-lg hover:bg-[var(--hover-bg)] transition" style={{ color: 'var(--text-muted)' }}>
+                        <button onClick={() => setSelectedTask(null)} className="p-1.5 text-neutral-500 hover:text-white rounded-lg hover:bg-neutral-800">
                           <X className="w-4 h-4" />
                         </button>
                       </div>
@@ -1269,44 +1345,57 @@ export default function DashboardPage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                       {/* Task objective */}
-                      <div className="space-y-1 p-3 rounded-lg" style={{ background: 'var(--surface)' }}>
-                        <span className="text-[9px] font-bold uppercase tracking-widest block" style={{ color: 'var(--text-muted)' }}>Objective</span>
+                      <div className="space-y-1 bg-neutral-950 p-3 rounded-lg">
+                        <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest block">Objective</span>
                         <textarea
                           defaultValue={selectedTask.objective}
-                          onBlur={(e) => handleSaveReflections('task', selectedTask.id, { objective: e.target.value })}
+                          onBlur={(e) => {
+                            handleSaveReflections('task', selectedTask.id, { objective: e.target.value });
+                            handleObjectiveClarityCheck(e.target.value, true);
+                          }}
                           placeholder="Log task target..."
-                          className="w-full bg-transparent border-0 outline-none resize-none focus:ring-0 h-12"
-                          style={{ color: 'var(--text-secondary)' }}
+                          className="w-full bg-transparent border-0 outline-none resize-none focus:ring-0 text-neutral-200 h-12"
                         />
+                        {taskObjectiveClarityWarning && (
+                          <span className="text-[9px] text-brand-amber font-semibold block pt-1 border-t border-neutral-900 leading-normal">
+                            ⚠️ Clarity: {taskObjectiveClarityWarning}
+                          </span>
+                        )}
                       </div>
 
                       {/* Task result */}
-                      <div className="space-y-1 p-3 rounded-lg" style={{ background: 'var(--surface)' }}>
-                        <span className="text-[9px] font-bold uppercase tracking-widest block" style={{ color: 'var(--text-muted)' }}>Result</span>
+                      <div className="space-y-1 bg-neutral-950 p-3 rounded-lg">
+                        <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest block">Result</span>
                         <textarea
                           defaultValue={selectedTask.result}
-                          onBlur={(e) => handleSaveReflections('task', selectedTask.id, { result: e.target.value })}
+                          onBlur={(e) => {
+                            handleSaveReflections('task', selectedTask.id, { result: e.target.value });
+                            handleResultGapCheck(selectedTask.objective, e.target.value, true);
+                          }}
                           placeholder="Log completed result..."
-                          className="w-full bg-transparent border-0 outline-none resize-none focus:ring-0 h-12"
-                          style={{ color: 'var(--text-secondary)' }}
+                          className="w-full bg-transparent border-0 outline-none resize-none focus:ring-0 text-neutral-200 h-12"
                         />
+                        {taskGapAnalysis && (
+                          <span className="text-[9px] text-emerald-400 font-semibold block pt-1 border-t border-neutral-900 leading-normal">
+                            💡 Gap: {taskGapAnalysis}
+                          </span>
+                        )}
                       </div>
 
                       {/* Task lesson */}
-                      <div className="space-y-1 p-3 rounded-lg" style={{ background: 'var(--surface)' }}>
-                        <span className="text-[9px] font-bold uppercase tracking-widest block" style={{ color: 'var(--text-muted)' }}>Lesson</span>
+                      <div className="space-y-1 bg-neutral-950 p-3 rounded-lg">
+                        <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest block">Lesson</span>
                         <textarea
                           defaultValue={selectedTask.lesson}
                           onBlur={(e) => handleSaveReflections('task', selectedTask.id, { lesson: e.target.value })}
                           placeholder="Log learnings..."
-                          className="w-full bg-transparent border-0 outline-none resize-none focus:ring-0 h-12"
-                          style={{ color: 'var(--text-secondary)' }}
+                          className="w-full bg-transparent border-0 outline-none resize-none focus:ring-0 text-neutral-200 h-12"
                         />
                       </div>
 
                       {/* Task compromise */}
-                      <div className="space-y-1 p-3 rounded-lg" style={{ background: 'var(--surface)' }}>
-                        <span className="text-[9px] font-bold uppercase tracking-widest block" style={{ color: 'var(--text-muted)' }}>Compromise</span>
+                      <div className="space-y-1 bg-neutral-950 p-3 rounded-lg">
+                        <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest block">Compromise</span>
                         <textarea
                           defaultValue={selectedTask.compromise}
                           onBlur={(e) => {
@@ -1314,11 +1403,10 @@ export default function DashboardPage() {
                             handleCompromiseBlur(e.target.value);
                           }}
                           placeholder="Log sacrifice..."
-                          className="w-full bg-transparent border-0 outline-none resize-none focus:ring-0 h-12"
-                          style={{ color: 'var(--text-secondary)' }}
+                          className="w-full bg-transparent border-0 outline-none resize-none focus:ring-0 text-neutral-200 h-12"
                         />
                         {compromiseWarning && (
-                          <span className="text-[9px] text-brand-amber font-semibold block pt-1 border-t leading-normal" style={{ borderColor: 'var(--border)' }}>
+                          <span className="text-[9px] text-brand-amber font-semibold block pt-1 border-t border-neutral-900 leading-normal">
                             ⚠️ {compromiseWarning}
                           </span>
                         )}
@@ -1338,10 +1426,10 @@ export default function DashboardPage() {
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <div>
-                <h2 className="text-xl font-extrabold tracking-tight" style={{ color: 'var(--text-primary)' }}>Daily Habits</h2>
-                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Lock streaks and build behavioral feedback loops</p>
+                <h2 className="text-xl font-extrabold tracking-tight">Daily Habits</h2>
+                <p className="text-xs text-neutral-400">Lock streaks and build behavioral feedback loops</p>
               </div>
-              <button
+              <button 
                 onClick={() => setModalType('new-habit')}
                 className="px-4 py-2 text-xs font-semibold rounded-lg bg-gradient-to-r from-brand-teal to-brand-teal-dark text-white flex items-center gap-1.5 hover:scale-102 hover:opacity-95 transition"
               >
@@ -1353,25 +1441,23 @@ export default function DashboardPage() {
               {/* Habits List */}
               <div className="space-y-2">
                 {habits.length === 0 ? (
-                  <p className="text-xs py-6 text-center" style={{ color: 'var(--text-muted)' }}>No habits established yet. Create one above.</p>
+                  <p className="text-xs text-neutral-500 py-6 text-center">No habits established yet. Create one above.</p>
                 ) : (
                   habits.map(habit => {
                     const todayStr = new Date().toISOString().split('T')[0];
                     const isCheckedToday = habit.checkIns.some(c => c.date === todayStr);
 
                     return (
-                      <div
+                      <div 
                         key={habit.id}
                         onClick={() => setSelectedHabit(habit)}
-                        className={`p-4 rounded-xl border flex items-center justify-between gap-4 cursor-pointer transition`}
-                        style={{
-                          borderColor: selectedHabit?.id === habit.id ? 'var(--secondary)' : 'var(--border)',
-                          background: selectedHabit?.id === habit.id ? 'color-mix(in srgb, var(--secondary) 8%, var(--surface))' : 'transparent',
-                        }}
+                        className={`p-4 rounded-xl border flex items-center justify-between gap-4 cursor-pointer transition ${
+                          selectedHabit?.id === habit.id ? 'border-brand-teal bg-neutral-900/30' : 'border-neutral-900 hover:border-neutral-800'
+                        }`}
                       >
                         <div className="space-y-1">
-                          <h3 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{habit.name}</h3>
-                          <div className="flex items-center gap-2 text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                          <h3 className="font-bold text-white text-sm">{habit.name}</h3>
+                          <div className="flex items-center gap-2 text-[11px] text-neutral-400">
                             <span className="text-brand-teal font-semibold">Streak: {habit.streak} days 🔥</span>
                             <span>•</span>
                             <span>Objective truncated</span>
@@ -1385,11 +1471,10 @@ export default function DashboardPage() {
                             handleHabitCheckIn(habit.id);
                           }}
                           className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 border transition ${
-                            isCheckedToday
-                              ? 'bg-brand-teal border-brand-teal text-white'
-                              : ''
+                            isCheckedToday 
+                              ? 'bg-brand-teal border-brand-teal text-white' 
+                              : 'border-neutral-800 bg-neutral-900 text-neutral-300 hover:bg-neutral-800'
                           }`}
-                          style={!isCheckedToday ? { borderColor: 'var(--border)', background: 'var(--surface-elevated)', color: 'var(--text-secondary)' } : {}}
                         >
                           {isCheckedToday ? <CheckCircle className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
                           {isCheckedToday ? 'Done Today' : 'Mark Done'}
@@ -1401,60 +1486,57 @@ export default function DashboardPage() {
               </div>
 
               {/* Habit details form reflection */}
-              <div className="glass p-5 rounded-2xl border min-h-64 flex flex-col justify-between" style={{ borderColor: 'var(--border)' }}>
+              <div className="glass p-5 rounded-2xl border-neutral-900 bg-neutral-900/10 min-h-64 flex flex-col justify-between">
                 {selectedHabit ? (
                   <div className="space-y-4 animate-slide-up flex-grow flex flex-col justify-between">
                     <div className="space-y-3">
-                      <div className="flex justify-between items-center border-b pb-2" style={{ borderColor: 'var(--border)' }}>
-                        <h3 className="font-bold text-base" style={{ color: 'var(--text-primary)' }}>{selectedHabit.name}</h3>
-                        <button
+                      <div className="flex justify-between items-center border-b border-neutral-900 pb-2">
+                        <h3 className="font-bold text-white text-base">{selectedHabit.name}</h3>
+                        <button 
                           onClick={() => handleDeleteEntity('habit', selectedHabit.id)}
-                          className="text-[10px] font-semibold text-red-400 hover:text-red-300 border border-red-950/70 px-2 py-1 rounded"
+                          className="text-[10px] font-semibold text-red-400 hover:text-red-300 border border-red-950 px-2 py-1 rounded"
                         >
                           Delete Habit
                         </button>
                       </div>
 
                       {/* Streaks details */}
-                      <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                      <p className="text-xs text-neutral-400">
                         Streaks resets to zero if daily check-in is missed. Keep logging objectives and lessons.
                       </p>
 
                       <div className="grid grid-cols-1 gap-3 text-xs">
-                        <div className="space-y-1 p-3 rounded-lg" style={{ background: 'var(--surface)' }}>
+                        <div className="space-y-1 bg-neutral-950 p-3 rounded-lg">
                           <label className="text-[9px] font-bold text-brand-teal uppercase tracking-widest block">Objective</label>
                           <textarea
                             defaultValue={selectedHabit.objective}
                             onBlur={(e) => handleSaveReflections('habit', selectedHabit.id, { objective: e.target.value })}
                             placeholder="Add habit objective..."
-                            className="w-full bg-transparent border-0 outline-none resize-none focus:ring-0 h-10"
-                            style={{ color: 'var(--text-secondary)' }}
+                            className="w-full bg-transparent border-0 outline-none resize-none focus:ring-0 text-neutral-200 h-10"
                           />
                         </div>
 
-                        <div className="space-y-1 p-3 rounded-lg" style={{ background: 'var(--surface)' }}>
+                        <div className="space-y-1 bg-neutral-950 p-3 rounded-lg">
                           <label className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest block">Result</label>
                           <textarea
                             defaultValue={selectedHabit.result}
                             onBlur={(e) => handleSaveReflections('habit', selectedHabit.id, { result: e.target.value })}
                             placeholder="Add habit result..."
-                            className="w-full bg-transparent border-0 outline-none resize-none focus:ring-0 h-10"
-                            style={{ color: 'var(--text-secondary)' }}
+                            className="w-full bg-transparent border-0 outline-none resize-none focus:ring-0 text-neutral-200 h-10"
                           />
                         </div>
 
-                        <div className="space-y-1 p-3 rounded-lg" style={{ background: 'var(--surface)' }}>
+                        <div className="space-y-1 bg-neutral-950 p-3 rounded-lg">
                           <label className="text-[9px] font-bold text-brand-amber uppercase tracking-widest block">Lesson</label>
                           <textarea
                             defaultValue={selectedHabit.lesson}
                             onBlur={(e) => handleSaveReflections('habit', selectedHabit.id, { lesson: e.target.value })}
                             placeholder="Add habit lesson..."
-                            className="w-full bg-transparent border-0 outline-none resize-none focus:ring-0 h-10"
-                            style={{ color: 'var(--text-secondary)' }}
+                            className="w-full bg-transparent border-0 outline-none resize-none focus:ring-0 text-neutral-200 h-10"
                           />
                         </div>
 
-                        <div className="space-y-1 p-3 rounded-lg" style={{ background: 'var(--surface)' }}>
+                        <div className="space-y-1 bg-neutral-950 p-3 rounded-lg">
                           <label className="text-[9px] font-bold text-brand-coral uppercase tracking-widest block">Compromise</label>
                           <textarea
                             defaultValue={selectedHabit.compromise}
@@ -1463,11 +1545,10 @@ export default function DashboardPage() {
                               handleCompromiseBlur(e.target.value);
                             }}
                             placeholder="Add habit compromise..."
-                            className="w-full bg-transparent border-0 outline-none resize-none focus:ring-0 h-10"
-                            style={{ color: 'var(--text-secondary)' }}
+                            className="w-full bg-transparent border-0 outline-none resize-none focus:ring-0 text-neutral-200 h-10"
                           />
                           {compromiseWarning && (
-                            <span className="text-[9px] text-brand-amber font-semibold block pt-1 border-t leading-normal" style={{ borderColor: 'var(--border)' }}>
+                            <span className="text-[9px] text-brand-amber font-semibold block pt-1 border-t border-neutral-900 leading-normal">
                               ⚠️ {compromiseWarning}
                             </span>
                           )}
@@ -1476,8 +1557,8 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center text-center py-20" style={{ color: 'var(--text-muted)' }}>
-                    <CalendarIcon className="w-10 h-10 mb-2 animate-bounce" style={{ color: 'var(--border)' }} />
+                  <div className="flex flex-col items-center justify-center text-center py-20 text-neutral-500">
+                    <CalendarIcon className="w-10 h-10 text-neutral-700 mb-2 animate-bounce" />
                     <p className="text-xs">Select a habit from the list to view reflective logs.</p>
                   </div>
                 )}
@@ -1492,35 +1573,35 @@ export default function DashboardPage() {
         {activeTab === 'calendar' && (
           <div className="space-y-6">
             <div>
-              <h2 className="text-xl font-extrabold tracking-tight" style={{ color: 'var(--text-primary)' }}>Task &amp; Deadline Calendar</h2>
-              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Color-coded deadlines: Purple (Projects), Coral (Tasks), Teal (Scheduled)</p>
+              <h2 className="text-xl font-extrabold tracking-tight">Task & Deadline Calendar</h2>
+              <p className="text-xs text-neutral-400">Color-coded deadlines: Purple (Projects), Coral (Tasks), Teal (Scheduled)</p>
             </div>
 
             {/* MONTH SWITCHER GRID */}
-            <div className="glass p-5 rounded-2xl border" style={{ borderColor: 'var(--border)' }}>
+            <div className="glass p-5 rounded-2xl border border-neutral-900 bg-neutral-900/10">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="font-bold text-base" style={{ color: 'var(--text-primary)' }}>
+                <h3 className="font-bold text-white text-base">
                   {currentCalendarDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
                 </h3>
                 <div className="flex items-center gap-1">
-                  <button onClick={() => changeMonth(-1)} className="p-2 border rounded-lg transition" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--hover-bg)'; }}
-                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--surface)'; }}
-                  >
-                    <ChevronLeft className="w-4 h-4" style={{ color: 'var(--text-primary)' }} />
+                  <button onClick={() => changeMonth(-1)} className="p-2 border border-neutral-800 bg-neutral-950 rounded-lg hover:bg-neutral-900 transition">
+                    <ChevronLeft className="w-4 h-4" />
                   </button>
-                  <button onClick={() => changeMonth(1)} className="p-2 border rounded-lg transition" style={{ borderColor: 'var(--border)', background: 'var(--surface)' }}
-                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--hover-bg)'; }}
-                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--surface)'; }}
-                  >
-                    <ChevronRight className="w-4 h-4" style={{ color: 'var(--text-primary)' }} />
+                  <button onClick={() => changeMonth(1)} className="p-2 border border-neutral-800 bg-neutral-950 rounded-lg hover:bg-neutral-900 transition">
+                    <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
               </div>
 
               {/* Day Headers */}
-              <div className="grid grid-cols-7 gap-2 mb-2 text-center text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
-                <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+              <div className="grid grid-cols-7 gap-2 mb-2 text-center text-xs font-semibold text-neutral-500">
+                <div>Sun</div>
+                <div>Mon</div>
+                <div>Tue</div>
+                <div>Wed</div>
+                <div>Thu</div>
+                <div>Fri</div>
+                <div>Sat</div>
               </div>
 
               {/* Day Grid cells */}
@@ -1539,17 +1620,15 @@ export default function DashboardPage() {
                     <div
                       key={dateStr}
                       onClick={() => setSelectedCalendarDayStr(dateStr)}
-                      className="aspect-square p-2 border flex flex-col justify-between items-center rounded-xl cursor-pointer relative hover:scale-105 active:scale-98 transition duration-150"
-                      style={{
-                        borderColor: isSelected ? 'var(--primary)' : isToday ? 'var(--secondary)' : 'var(--border)',
-                        background: isSelected
-                          ? 'color-mix(in srgb, var(--primary) 8%, var(--surface))'
-                          : isToday
-                            ? 'color-mix(in srgb, var(--secondary) 8%, var(--surface))'
-                            : 'color-mix(in srgb, var(--surface) 40%, transparent)',
-                      }}
+                      className={`aspect-square p-2 border flex flex-col justify-between items-center rounded-xl cursor-pointer relative hover:scale-105 active:scale-98 transition duration-150 ${
+                        isSelected 
+                          ? 'border-brand-purple bg-brand-purple/5 shadow-md shadow-purple-500/5' 
+                          : isToday 
+                            ? 'border-brand-teal bg-brand-teal/5' 
+                            : 'border-neutral-900 bg-neutral-950/40 hover:border-neutral-700'
+                      }`}
                     >
-                      <span className="text-xs font-bold" style={{ color: isToday ? 'var(--secondary)' : 'var(--text-secondary)' }}>
+                      <span className={`text-xs font-bold ${isToday ? 'text-brand-teal' : 'text-neutral-300'}`}>
                         {date.getDate()}
                       </span>
 
@@ -1566,8 +1645,8 @@ export default function DashboardPage() {
             </div>
 
             {/* DETAIL STRIP (drawer below calendar grid) */}
-            <div className="glass p-5 rounded-2xl border space-y-4" style={{ borderColor: 'var(--border)' }}>
-              <h3 className="font-bold text-sm border-b pb-2" style={{ color: 'var(--text-primary)', borderColor: 'var(--border)' }}>
+            <div className="glass p-5 rounded-2xl border border-neutral-900 bg-neutral-900/10 space-y-4">
+              <h3 className="font-bold text-sm border-b border-neutral-900 pb-2">
                 Due on {new Date(selectedCalendarDayStr).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
               </h3>
 
@@ -1575,7 +1654,7 @@ export default function DashboardPage() {
                 const { projects: dueP, tasks: dueT, scheduled: dueS } = getDueItemsForSelectedDay();
 
                 if (dueP.length === 0 && dueT.length === 0 && dueS.length === 0) {
-                  return <p className="text-xs py-2" style={{ color: 'var(--text-muted)' }}>No deadlines scheduled for this day.</p>;
+                  return <p className="text-xs text-neutral-500 py-2">No deadlines scheduled for this day.</p>;
                 }
 
                 return (
@@ -1585,9 +1664,9 @@ export default function DashboardPage() {
                       <div key={p.id} className="p-3 rounded-lg bg-purple-950/20 border border-brand-purple/20 flex justify-between items-center">
                         <div className="space-y-0.5">
                           <span className="text-[9px] font-bold text-brand-purple-light uppercase tracking-wider block">Project Deadline</span>
-                          <span className="font-bold text-xs" style={{ color: 'var(--text-primary)' }}>{p.name}</span>
+                          <span className="font-bold text-white text-xs">{p.name}</span>
                         </div>
-                        <button
+                        <button 
                           onClick={() => {
                             setActiveTab('projects');
                             setSelectedProject(p);
@@ -1605,9 +1684,9 @@ export default function DashboardPage() {
                       <div key={t.id} className="p-3 rounded-lg bg-orange-950/20 border border-brand-coral/20 flex justify-between items-center">
                         <div className="space-y-0.5">
                           <span className="text-[9px] font-bold text-brand-coral-light uppercase tracking-wider block">Task Deadline</span>
-                          <span className="font-bold text-xs" style={{ color: 'var(--text-primary)' }}>{t.name}</span>
+                          <span className="font-bold text-white text-xs">{t.name}</span>
                         </div>
-                        <button
+                        <button 
                           onClick={() => {
                             const p = projects.find(proj => proj.id === t.projectId);
                             setActiveTab('projects');
@@ -1626,9 +1705,9 @@ export default function DashboardPage() {
                       <div key={s.id} className="p-3 rounded-lg bg-teal-950/20 border border-brand-teal/20 flex justify-between items-center">
                         <div className="space-y-0.5">
                           <span className="text-[9px] font-bold text-brand-teal-light uppercase tracking-wider block">Scheduled task ({s.time})</span>
-                          <span className="font-bold text-xs" style={{ color: 'var(--text-primary)' }}>{s.name}</span>
+                          <span className="font-bold text-white text-xs">{s.name}</span>
                         </div>
-                        <button
+                        <button 
                           onClick={() => {
                             setActiveTab('scheduled');
                             setSelectedScheduled(s);
@@ -1653,10 +1732,10 @@ export default function DashboardPage() {
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <div>
-                <h2 className="text-xl font-extrabold tracking-tight" style={{ color: 'var(--text-primary)' }}>One-Off Scheduled Tasks</h2>
-                <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Chronological checklist of non-project appointments and duties</p>
+                <h2 className="text-xl font-extrabold tracking-tight">One-Off Scheduled Tasks</h2>
+                <p className="text-xs text-neutral-400">Chronological checklist of non-project appointments and duties</p>
               </div>
-              <button
+              <button 
                 onClick={() => setModalType('new-scheduled')}
                 className="px-4 py-2 text-xs font-semibold rounded-lg bg-gradient-to-r from-brand-teal to-brand-teal-dark text-white flex items-center gap-1.5 hover:scale-102 hover:opacity-95 transition"
               >
@@ -1668,86 +1747,81 @@ export default function DashboardPage() {
               {/* Scheduled checklist */}
               <div className="space-y-2">
                 {scheduledTasks.length === 0 ? (
-                  <p className="text-xs py-6 text-center" style={{ color: 'var(--text-muted)' }}>No scheduled items. Create one above.</p>
+                  <p className="text-xs text-neutral-500 py-6 text-center">No scheduled items. Create one above.</p>
                 ) : (
                   scheduledTasks.map(item => (
                     <div
                       key={item.id}
                       onClick={() => setSelectedScheduled(item)}
-                      className="p-4 rounded-xl border flex items-center justify-between gap-4 cursor-pointer transition"
-                      style={{
-                        borderColor: selectedScheduled?.id === item.id ? 'var(--secondary)' : 'var(--border)',
-                        background: selectedScheduled?.id === item.id ? 'color-mix(in srgb, var(--secondary) 8%, var(--surface))' : 'transparent',
-                      }}
+                      className={`p-4 rounded-xl border flex items-center justify-between gap-4 cursor-pointer transition ${
+                        selectedScheduled?.id === item.id ? 'border-brand-teal bg-neutral-900/30' : 'border-neutral-900 hover:border-neutral-800'
+                      }`}
                     >
                       <div className="space-y-1">
-                        <h3 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{item.name}</h3>
-                        <div className="flex items-center gap-2 text-[10px] font-semibold uppercase" style={{ color: 'var(--text-muted)' }}>
+                        <h3 className="font-bold text-white text-sm">{item.name}</h3>
+                        <div className="flex items-center gap-2 text-[10px] text-neutral-400 font-semibold uppercase">
                           <span className="text-brand-teal">{item.date}</span>
                           <span>at</span>
-                          <span style={{ color: 'var(--text-secondary)' }}>{item.time}</span>
+                          <span className="text-neutral-300">{item.time}</span>
                         </div>
                       </div>
-                      <ChevronRight className="w-4 h-4" style={{ color: 'var(--text-muted)' }} />
+                      <ChevronRight className="w-4 h-4 text-neutral-600" />
                     </div>
                   ))
                 )}
               </div>
 
               {/* Reflections block for scheduled item */}
-              <div className="glass p-5 rounded-2xl border min-h-64 flex flex-col justify-between" style={{ borderColor: 'var(--border)' }}>
+              <div className="glass p-5 rounded-2xl border-neutral-900 bg-neutral-900/10 min-h-64 flex flex-col justify-between">
                 {selectedScheduled ? (
                   <div className="space-y-4 animate-slide-up flex-grow flex flex-col justify-between">
                     <div className="space-y-3">
-                      <div className="flex justify-between items-center border-b pb-2" style={{ borderColor: 'var(--border)' }}>
-                        <h3 className="font-bold text-base" style={{ color: 'var(--text-primary)' }}>{selectedScheduled.name}</h3>
-                        <button
+                      <div className="flex justify-between items-center border-b border-neutral-900 pb-2">
+                        <h3 className="font-bold text-white text-base">{selectedScheduled.name}</h3>
+                        <button 
                           onClick={() => handleDeleteEntity('scheduled', selectedScheduled.id)}
-                          className="text-[10px] font-semibold text-red-400 hover:text-red-300 border border-red-950/70 px-2 py-1 rounded"
+                          className="text-[10px] font-semibold text-red-400 hover:text-red-300 border border-red-950 px-2 py-1 rounded"
                         >
                           Delete Task
                         </button>
                       </div>
 
-                      <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                        Date: <span style={{ color: 'var(--text-primary)' }}>{selectedScheduled.date}</span> at <span style={{ color: 'var(--text-primary)' }}>{selectedScheduled.time}</span> (Teal calendar dot)
+                      <p className="text-xs text-neutral-400">
+                        Date: <span className="text-white">{selectedScheduled.date}</span> at <span className="text-white">{selectedScheduled.time}</span> (Teal calendar dot)
                       </p>
 
                       <div className="grid grid-cols-1 gap-3 text-xs">
-                        <div className="space-y-1 p-3 rounded-lg" style={{ background: 'var(--surface)' }}>
+                        <div className="space-y-1 bg-neutral-950 p-3 rounded-lg">
                           <label className="text-[9px] font-bold text-brand-teal uppercase tracking-widest block">Objective</label>
                           <textarea
                             defaultValue={selectedScheduled.objective}
                             onBlur={(e) => handleSaveReflections('scheduled', selectedScheduled.id, { objective: e.target.value })}
                             placeholder="Add objective reflections..."
-                            className="w-full bg-transparent border-0 outline-none resize-none focus:ring-0 h-10"
-                            style={{ color: 'var(--text-secondary)' }}
+                            className="w-full bg-transparent border-0 outline-none resize-none focus:ring-0 text-neutral-200 h-10"
                           />
                         </div>
 
-                        <div className="space-y-1 p-3 rounded-lg" style={{ background: 'var(--surface)' }}>
+                        <div className="space-y-1 bg-neutral-950 p-3 rounded-lg">
                           <label className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest block">Result</label>
                           <textarea
                             defaultValue={selectedScheduled.result}
                             onBlur={(e) => handleSaveReflections('scheduled', selectedScheduled.id, { result: e.target.value })}
                             placeholder="Add result reflections..."
-                            className="w-full bg-transparent border-0 outline-none resize-none focus:ring-0 h-10"
-                            style={{ color: 'var(--text-secondary)' }}
+                            className="w-full bg-transparent border-0 outline-none resize-none focus:ring-0 text-neutral-200 h-10"
                           />
                         </div>
 
-                        <div className="space-y-1 p-3 rounded-lg" style={{ background: 'var(--surface)' }}>
+                        <div className="space-y-1 bg-neutral-950 p-3 rounded-lg">
                           <label className="text-[9px] font-bold text-brand-amber uppercase tracking-widest block">Lesson</label>
                           <textarea
                             defaultValue={selectedScheduled.lesson}
                             onBlur={(e) => handleSaveReflections('scheduled', selectedScheduled.id, { lesson: e.target.value })}
                             placeholder="Add lesson reflections..."
-                            className="w-full bg-transparent border-0 outline-none resize-none focus:ring-0 h-10"
-                            style={{ color: 'var(--text-secondary)' }}
+                            className="w-full bg-transparent border-0 outline-none resize-none focus:ring-0 text-neutral-200 h-10"
                           />
                         </div>
 
-                        <div className="space-y-1 p-3 rounded-lg" style={{ background: 'var(--surface)' }}>
+                        <div className="space-y-1 bg-neutral-950 p-3 rounded-lg">
                           <label className="text-[9px] font-bold text-brand-coral uppercase tracking-widest block">Compromise</label>
                           <textarea
                             defaultValue={selectedScheduled.compromise}
@@ -1756,11 +1830,10 @@ export default function DashboardPage() {
                               handleCompromiseBlur(e.target.value);
                             }}
                             placeholder="Add compromise reflections..."
-                            className="w-full bg-transparent border-0 outline-none resize-none focus:ring-0 h-10"
-                            style={{ color: 'var(--text-secondary)' }}
+                            className="w-full bg-transparent border-0 outline-none resize-none focus:ring-0 text-neutral-200 h-10"
                           />
                           {compromiseWarning && (
-                            <span className="text-[9px] text-brand-amber font-semibold block pt-1 border-t leading-normal" style={{ borderColor: 'var(--border)' }}>
+                            <span className="text-[9px] text-brand-amber font-semibold block pt-1 border-t border-neutral-900 leading-normal">
                               ⚠️ {compromiseWarning}
                             </span>
                           )}
@@ -1769,8 +1842,8 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center text-center py-20" style={{ color: 'var(--text-muted)' }}>
-                    <Clock className="w-10 h-10 mb-2 animate-pulse" style={{ color: 'var(--border)' }} />
+                  <div className="flex flex-col items-center justify-center text-center py-20 text-neutral-500">
+                    <Clock className="w-10 h-10 text-neutral-700 mb-2 animate-pulse" />
                     <p className="text-xs">Select a scheduled task from the checklist to edit.</p>
                   </div>
                 )}
@@ -1784,15 +1857,13 @@ export default function DashboardPage() {
       {/* ======================================================== */}
       {/* 2. BOTTOM TABS NAVIGATION */}
       {/* ======================================================== */}
-      <footer
-        className="fixed bottom-0 left-0 right-0 z-20 max-w-5xl mx-auto w-full border-t px-6 py-3 flex justify-around items-center"
-        style={{ borderColor: 'var(--border)', background: 'var(--bg-base)' }}
-      >
+      <footer className="fixed bottom-0 left-0 right-0 z-20 max-w-5xl mx-auto w-full border-t border-neutral-900 bg-neutral-950 px-6 py-3 flex justify-around items-center">
         {/* Tab 1 - Projects */}
         <button
           onClick={() => setActiveTab('projects')}
-          className="flex flex-col items-center gap-1.5 transition"
-          style={{ color: activeTab === 'projects' ? 'var(--primary)' : 'var(--text-muted)' }}
+          className={`flex flex-col items-center gap-1.5 transition ${
+            activeTab === 'projects' ? 'text-brand-purple' : 'text-neutral-500 hover:text-neutral-300'
+          }`}
         >
           <Folder className="w-5 h-5" />
           <span className="text-[10px] font-bold tracking-wide uppercase">Projects</span>
@@ -1801,8 +1872,9 @@ export default function DashboardPage() {
         {/* Tab 2 - Habits */}
         <button
           onClick={() => setActiveTab('habits')}
-          className="flex flex-col items-center gap-1.5 transition"
-          style={{ color: activeTab === 'habits' ? 'var(--secondary)' : 'var(--text-muted)' }}
+          className={`flex flex-col items-center gap-1.5 transition ${
+            activeTab === 'habits' ? 'text-brand-teal' : 'text-neutral-500 hover:text-neutral-300'
+          }`}
         >
           <RotateCcw className="w-5 h-5" />
           <span className="text-[10px] font-bold tracking-wide uppercase">Habits</span>
@@ -1811,8 +1883,9 @@ export default function DashboardPage() {
         {/* Tab 3 - Calendar */}
         <button
           onClick={() => setActiveTab('calendar')}
-          className="flex flex-col items-center gap-1.5 transition"
-          style={{ color: activeTab === 'calendar' ? 'var(--primary)' : 'var(--text-muted)' }}
+          className={`flex flex-col items-center gap-1.5 transition ${
+            activeTab === 'calendar' ? 'text-brand-purple' : 'text-neutral-500 hover:text-neutral-300'
+          }`}
         >
           <CalendarIcon className="w-5 h-5" />
           <span className="text-[10px] font-bold tracking-wide uppercase">Calendar</span>
@@ -1821,8 +1894,9 @@ export default function DashboardPage() {
         {/* Tab 4 - Scheduled */}
         <button
           onClick={() => setActiveTab('scheduled')}
-          className="flex flex-col items-center gap-1.5 transition"
-          style={{ color: activeTab === 'scheduled' ? 'var(--secondary)' : 'var(--text-muted)' }}
+          className={`flex flex-col items-center gap-1.5 transition ${
+            activeTab === 'scheduled' ? 'text-brand-teal' : 'text-neutral-500 hover:text-neutral-300'
+          }`}
         >
           <Clock className="w-5 h-5" />
           <span className="text-[10px] font-bold tracking-wide uppercase">Scheduled</span>
@@ -1833,29 +1907,24 @@ export default function DashboardPage() {
       {/* OVERLAY PANEL 1: NOTIFICATIONS FEED */}
       {/* ======================================================== */}
       {showNotifications && (
-        <div
-          className="fixed inset-0 z-50 flex justify-end"
-          style={{ background: 'var(--overlay)', backdropFilter: 'blur(4px)' }}
-          onClick={() => setShowNotifications(false)}
-        >
-          <div
-            className="w-full max-w-md h-full border-l p-6 flex flex-col justify-between text-left animate-slide-up"
-            style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex justify-end animate-fade-in" onClick={() => setShowNotifications(false)}>
+          <div 
+            className="w-full max-w-md h-full bg-neutral-900 border-l border-neutral-800 p-6 flex flex-col justify-between text-left animate-slide-up"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="space-y-6 overflow-y-auto">
-              <div className="flex justify-between items-center border-b pb-3" style={{ borderColor: 'var(--border)' }}>
-                <h3 className="font-extrabold text-lg flex items-center gap-1.5" style={{ color: 'var(--text-primary)' }}>
+              <div className="flex justify-between items-center border-b border-neutral-800 pb-3">
+                <h3 className="font-extrabold text-lg text-white flex items-center gap-1.5">
                   <Bell className="w-5 h-5 text-brand-amber" /> Notifications Center
                 </h3>
                 <div className="flex items-center gap-2">
-                  <button
+                  <button 
                     onClick={() => handleMarkNotificationsRead()}
                     className="text-[10px] font-semibold text-brand-amber hover:underline"
                   >
                     Clear All Read
                   </button>
-                  <button onClick={() => setShowNotifications(false)} className="p-1 rounded" style={{ color: 'var(--text-muted)' }}>
+                  <button onClick={() => setShowNotifications(false)} className="p-1 text-neutral-400 hover:text-white rounded hover:bg-neutral-800">
                     <X className="w-5 h-5" />
                   </button>
                 </div>
@@ -1864,24 +1933,15 @@ export default function DashboardPage() {
               {/* Notifications List */}
               <div className="space-y-3">
                 {notifications.length === 0 ? (
-                  <p className="text-xs py-10 text-center" style={{ color: 'var(--text-muted)' }}>No active notifications. Check deadlines on calendar tab.</p>
+                  <p className="text-xs text-neutral-500 py-10 text-center">No active notifications. Check deadlines on calendar tab.</p>
                 ) : (
                   notifications.map(notif => (
                     <div
                       key={notif.id}
                       onClick={() => handleNotificationClick(notif)}
-                      className="p-4 rounded-xl border cursor-pointer transition"
-                      style={{
-                        borderColor: notif.read ? 'var(--border)' : 'var(--accent)',
-                        background: notif.read ? 'color-mix(in srgb, var(--surface) 50%, transparent)' : 'color-mix(in srgb, var(--accent) 5%, var(--surface))',
-                        opacity: notif.read ? 0.6 : 1,
-                      }}
-                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = 'var(--hover-bg)'; }}
-                      onMouseLeave={(e) => {
-                        (e.currentTarget as HTMLElement).style.background = notif.read
-                          ? 'color-mix(in srgb, var(--surface) 50%, transparent)'
-                          : 'color-mix(in srgb, var(--accent) 5%, var(--surface))';
-                      }}
+                      className={`p-4 rounded-xl border cursor-pointer hover:bg-neutral-950 transition ${
+                        notif.read ? 'border-neutral-900 bg-neutral-950/20 opacity-60' : 'border-brand-amber bg-brand-amber/5'
+                      }`}
                     >
                       <div className="flex justify-between items-start mb-1">
                         <span className={`text-[9px] font-extrabold uppercase tracking-wider ${
@@ -1890,11 +1950,11 @@ export default function DashboardPage() {
                         }`}>
                           {notif.title}
                         </span>
-                        <span className="text-[9px]" style={{ color: 'var(--text-muted)' }}>
+                        <span className="text-[9px] text-neutral-500">
                           {new Date(notif.createdAt).toLocaleDateString()}
                         </span>
                       </div>
-                      <p className="text-xs leading-normal mb-2" style={{ color: 'var(--text-secondary)' }}>
+                      <p className="text-xs text-neutral-200 leading-normal mb-2">
                         {notif.message}
                       </p>
                       <span className="text-[10px] text-brand-amber font-semibold block text-right hover:underline">
@@ -1913,129 +1973,175 @@ export default function DashboardPage() {
       {/* OVERLAY PANEL 2: PROFILE & SETTINGS */}
       {/* ======================================================== */}
       {showProfile && user && (
-        <div
-          className="fixed inset-0 z-50 flex justify-end"
-          style={{ background: 'var(--overlay)', backdropFilter: 'blur(4px)' }}
-          onClick={() => setShowProfile(false)}
-        >
-          <div
-            className="w-full max-w-md h-full border-l p-6 flex flex-col justify-between text-left"
-            style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex justify-end" onClick={() => setShowProfile(false)}>
+          <div 
+            className="w-full max-w-md h-full bg-neutral-900 border-l border-neutral-800 p-6 flex flex-col gap-6 text-left overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="space-y-6 overflow-y-auto">
-              <div className="flex justify-between items-center border-b pb-3" style={{ borderColor: 'var(--border)' }}>
-                <h3 className="font-extrabold text-lg flex items-center gap-1.5" style={{ color: 'var(--text-primary)' }}>
-                  <Settings className="w-5 h-5 text-brand-teal" /> Profile &amp; Settings
-                </h3>
-                <button onClick={() => setShowProfile(false)} className="p-1 rounded" style={{ color: 'var(--text-muted)' }}>
-                  <X className="w-5 h-5" />
-                </button>
+            <div className="flex justify-between items-center border-b border-neutral-800 pb-3 flex-shrink-0">
+              <h3 className="font-extrabold text-lg text-white flex items-center gap-1.5">
+                <Settings className="w-5 h-5 text-brand-teal" /> Profile & Settings
+              </h3>
+              <button onClick={() => setShowProfile(false)} className="p-1 text-neutral-400 hover:text-white rounded hover:bg-neutral-800">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* User details */}
+            <div className="space-y-4 flex-shrink-0">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block">Full Name</label>
+                <input
+                  type="text"
+                  defaultValue={user.name}
+                  id="profile-name"
+                  placeholder="Enter name"
+                  className="w-full px-3 py-2 rounded bg-neutral-950 border border-neutral-800 text-xs focus:border-brand-teal outline-none"
+                />
               </div>
 
-              {/* User details */}
-              <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-widest block" style={{ color: 'var(--text-muted)' }}>Full Name</label>
-                  <input
-                    type="text"
-                    defaultValue={user.name}
-                    id="profile-name"
-                    placeholder="Enter name"
-                    className="w-full px-3 py-2 rounded border text-xs outline-none focus:ring-1"
-                    style={{ ...S.input, ['--tw-ring-color' as any]: 'var(--focus-ring)' }}
-                  />
-                </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block">Email Address</label>
+                <input
+                  type="email"
+                  defaultValue={user.email}
+                  id="profile-email"
+                  placeholder="Enter email"
+                  className="w-full px-3 py-2 rounded bg-neutral-950 border border-neutral-800 text-xs focus:border-brand-teal outline-none"
+                />
+              </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-widest block" style={{ color: 'var(--text-muted)' }}>Email Address</label>
-                  <input
-                    type="email"
-                    defaultValue={user.email}
-                    id="profile-email"
-                    placeholder="Enter email"
-                    className="w-full px-3 py-2 rounded border text-xs outline-none"
-                    style={S.input}
-                  />
-                </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block">Reminder Window</label>
+                <select
+                  defaultValue={user.reminderTiming}
+                  id="profile-reminder"
+                  className="w-full px-3 py-2 rounded bg-neutral-950 border border-neutral-800 text-xs focus:border-brand-teal outline-none text-white"
+                >
+                  <option value={1}>1 Day before deadline</option>
+                  <option value={2}>2 Days before deadline (Default)</option>
+                  <option value={3}>3 Days before deadline</option>
+                  <option value={5}>5 Days before deadline</option>
+                </select>
+              </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-widest block" style={{ color: 'var(--text-muted)' }}>Reminder Window</label>
-                  <select
-                    defaultValue={user.reminderTiming}
-                    id="profile-reminder"
-                    className="w-full px-3 py-2 rounded border text-xs outline-none"
-                    style={S.input}
-                  >
-                    <option value={1}>1 Day before deadline</option>
-                    <option value={2}>2 Days before deadline (Default)</option>
-                    <option value={3}>3 Days before deadline</option>
-                    <option value={5}>5 Days before deadline</option>
-                  </select>
+              {/* Theme toggle layout class */}
+              <div className="space-y-1.5 flex justify-between items-center p-3 rounded-xl bg-neutral-950 border border-neutral-850">
+                <div>
+                  <label className="text-xs font-bold text-white block">Theme Mode</label>
+                  <span className="text-[10px] text-neutral-500">Toggle between Light and Dark interface</span>
                 </div>
-
-                {/* ── THEME SELECTOR in Profile panel ── */}
-                <div className="space-y-3 p-4 rounded-xl border" style={{ background: 'var(--surface-elevated)', borderColor: 'var(--border)' }}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <Palette className="w-4 h-4" style={{ color: 'var(--primary)' }} />
-                    <span className="text-xs font-bold" style={{ color: 'var(--text-primary)' }}>App Theme</span>
-                  </div>
-                  <p className="text-[10px] mb-3" style={{ color: 'var(--text-muted)' }}>
-                    Choose your preferred visual style. Changes apply instantly.
-                  </p>
-                  <div className="grid grid-cols-1 gap-1.5">
-                    {THEMES.map((theme: ThemeDefinition) => {
-                      const isActive = theme.id === currentThemeId;
-                      return (
-                        <button
-                          key={theme.id}
-                          onClick={() => handleThemeSelect(theme.id)}
-                          className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-left transition"
-                          style={{
-                            background: isActive ? 'color-mix(in srgb, var(--primary) 12%, var(--surface))' : 'var(--surface)',
-                            color: 'var(--text-primary)',
-                            border: `1px solid ${isActive ? 'var(--primary)' : 'var(--border)'}`,
-                          }}
-                          onMouseEnter={(e) => {
-                            if (!isActive) (e.currentTarget as HTMLElement).style.background = 'var(--hover-bg)';
-                          }}
-                          onMouseLeave={(e) => {
-                            if (!isActive) (e.currentTarget as HTMLElement).style.background = 'var(--surface)';
-                          }}
-                          aria-pressed={isActive}
-                        >
-                          <span className="text-base leading-none">{theme.emoji}</span>
-                          <span className="flex-grow text-xs font-semibold">{theme.name}</span>
-                          <ThemeSwatch swatches={theme.swatches} />
-                          {isActive && (
-                            <Check className="w-3.5 h-3.5 ml-1 flex-shrink-0" style={{ color: 'var(--primary)' }} />
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
                 <button
                   onClick={() => {
+                    const nextTheme = user.theme === 'dark' ? 'light' : 'dark';
                     handleUpdateProfile({
                       name: (document.getElementById('profile-name') as HTMLInputElement).value,
                       email: (document.getElementById('profile-email') as HTMLInputElement).value,
-                      theme: currentThemeId,
+                      theme: nextTheme,
                       reminderTiming: parseInt((document.getElementById('profile-reminder') as HTMLSelectElement).value, 10),
                     });
                   }}
-                  className="w-full py-2.5 rounded-lg bg-gradient-to-r from-brand-teal to-brand-teal-dark text-white font-semibold text-xs hover:opacity-95 transition"
+                  className="p-2 border border-neutral-800 rounded bg-neutral-900 text-brand-teal hover:text-white transition"
                 >
-                  Save Settings
+                  {user.theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
                 </button>
               </div>
+
+              <button
+                onClick={() => {
+                  handleUpdateProfile({
+                    name: (document.getElementById('profile-name') as HTMLInputElement).value,
+                    email: (document.getElementById('profile-email') as HTMLInputElement).value,
+                    theme: user.theme,
+                    reminderTiming: parseInt((document.getElementById('profile-reminder') as HTMLSelectElement).value, 10),
+                  });
+                }}
+                className="w-full py-2.5 rounded-lg bg-gradient-to-r from-brand-teal to-brand-teal-dark text-white font-semibold text-xs hover:opacity-95 transition"
+              >
+                Save Settings
+              </button>
             </div>
 
-            <div className="border-t pt-4" style={{ borderColor: 'var(--border)' }}>
+            {/* Monthly Reports (AI 16) */}
+            <div className="space-y-3 flex-shrink-0">
+              <div className="flex items-center justify-between border-b border-neutral-800 pb-2">
+                <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-brand-amber" /> Monthly Reports
+                </span>
+                <button
+                  onClick={handleGenerateMonthlyReport}
+                  disabled={generatingReport}
+                  className="px-3 py-1 rounded-lg bg-brand-amber/10 border border-brand-amber/20 text-brand-amber text-[10px] font-bold uppercase tracking-wider hover:bg-brand-amber/20 transition disabled:opacity-50"
+                >
+                  {generatingReport ? 'Generating...' : '+ Generate'}
+                </button>
+              </div>
+
+              {monthlyReports.length === 0 ? (
+                <p className="text-[11px] text-neutral-500 italic py-1">
+                  No monthly reports yet. Generate your first AI-powered productivity retrospective!
+                </p>
+              ) : (
+                <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                  {monthlyReports.map((report: any) => (
+                    <div key={report.id} className="p-3 bg-neutral-950 rounded-xl border border-neutral-800 space-y-1">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-brand-amber">
+                          {report.month ? new Date(report.month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'Monthly Report'}
+                        </span>
+                        <span className="text-[10px] text-neutral-500">
+                          {new Date(report.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-neutral-300 leading-relaxed line-clamp-3">{report.summary}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Weekly Debriefs Log */}
+            <div className="space-y-3 flex-shrink-0">
+              <div className="flex items-center justify-between border-b border-neutral-800 pb-2">
+                <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <Brain className="w-4 h-4 text-brand-purple" /> Weekly Debriefs
+                </span>
+                <button
+                  onClick={handleGenerateDebrief}
+                  disabled={generatingDebrief}
+                  className="px-3 py-1 rounded-lg bg-brand-purple/10 border border-brand-purple/20 text-brand-purple-light text-[10px] font-bold uppercase tracking-wider hover:bg-brand-purple/20 transition disabled:opacity-50"
+                >
+                  {generatingDebrief ? 'Generating...' : '+ Generate'}
+                </button>
+              </div>
+
+              {debriefs.length === 0 ? (
+                <p className="text-[11px] text-neutral-500 italic py-1">
+                  No debriefs yet. Generate your Sunday retrospective when ready.
+                </p>
+              ) : (
+                <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+                  {debriefs.map((debrief: any) => (
+                    <div key={debrief.id} className="p-3 bg-neutral-950 rounded-xl border border-neutral-800 space-y-1">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-brand-purple-light">
+                          Week of {debrief.weekStart ? new Date(debrief.weekStart).toLocaleDateString() : '—'}
+                        </span>
+                        <span className="text-[10px] text-neutral-500">
+                          {new Date(debrief.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-neutral-300 leading-relaxed line-clamp-3">{debrief.summary}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="border-t border-neutral-800 pt-4 flex-shrink-0">
               <button
                 onClick={handleLogout}
-                className="w-full py-2.5 rounded-lg border border-red-950/70 hover:bg-red-950/20 text-red-400 font-semibold text-xs flex items-center justify-center gap-1.5 transition"
+                className="w-full py-2.5 rounded-lg border border-red-950 hover:bg-red-950/20 text-red-400 font-semibold text-xs flex items-center justify-center gap-1.5 transition"
               >
                 <LogOut className="w-4 h-4" /> Sign Out
               </button>
@@ -2045,82 +2151,140 @@ export default function DashboardPage() {
       )}
 
       {/* ======================================================== */}
+      {/* FOCUS BLOCK MODAL (AI 12) */}
+      {/* ======================================================== */}
+      {showFocusModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowFocusModal(false)}>
+          <div
+            className="w-full max-w-lg bg-neutral-900 border border-neutral-800 rounded-2xl p-6 space-y-5 shadow-2xl max-h-[85vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-neutral-800 pb-4">
+              <div>
+                <h3 className="font-extrabold text-lg text-white flex items-center gap-2">
+                  <Brain className="w-5 h-5 text-brand-teal" /> Daily Focus Schedule
+                </h3>
+                <p className="text-[11px] text-neutral-400 mt-0.5">AI-generated time blocks based on your tasks & habits</p>
+              </div>
+              <button onClick={() => setShowFocusModal(false)} className="p-1.5 text-neutral-500 hover:text-white rounded-lg hover:bg-neutral-800 transition">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {focusBlocks.length === 0 ? (
+              <p className="text-xs text-neutral-500 py-6 text-center italic">No schedule blocks generated yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {focusBlocks.map((block: any, idx: number) => (
+                  <div key={idx} className="flex gap-4 p-4 bg-neutral-950 rounded-xl border border-neutral-800 group hover:border-brand-teal/30 transition">
+                    <div className="text-right shrink-0 w-20">
+                      <span className="text-xs font-bold text-brand-teal block">{block.time}</span>
+                      {block.duration && (
+                        <span className="text-[10px] text-neutral-500">{block.duration}</span>
+                      )}
+                    </div>
+                    <div className="flex-grow space-y-1">
+                      <span className="text-xs font-bold text-white block">{block.task}</span>
+                      {block.note && (
+                        <span className="text-[11px] text-neutral-400 italic block">{block.note}</span>
+                      )}
+                      {block.type && (
+                        <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border inline-block ${
+                          block.type === 'deep' ? 'bg-brand-purple/10 text-brand-purple-light border-brand-purple/20' :
+                          block.type === 'break' ? 'bg-emerald-950/40 text-emerald-400 border-emerald-900' :
+                          'bg-brand-teal/10 text-brand-teal border-brand-teal/20'
+                        }`}>
+                          {block.type}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <button
+              onClick={() => setShowFocusModal(false)}
+              className="w-full py-2.5 bg-brand-teal text-black font-extrabold text-xs rounded-xl hover:opacity-95 transition"
+            >
+              Got it, let's focus!
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
       {/* OVERLAY PANEL 3: ABOUT (PHILOSOPHY & STATS) */}
       {/* ======================================================== */}
       {showAbout && (
-        <div
-          className="fixed inset-0 z-50 flex justify-end"
-          style={{ background: 'var(--overlay)', backdropFilter: 'blur(4px)' }}
-          onClick={() => setShowAbout(false)}
-        >
-          <div
-            className="w-full max-w-md h-full border-l p-6 flex flex-col justify-between text-left"
-            style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex justify-end" onClick={() => setShowAbout(false)}>
+          <div 
+            className="w-full max-w-md h-full bg-neutral-900 border-l border-neutral-800 p-6 flex flex-col justify-between text-left"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="space-y-6 overflow-y-auto flex-grow">
-              <div className="flex justify-between items-center border-b pb-3" style={{ borderColor: 'var(--border)' }}>
-                <h3 className="font-extrabold text-lg flex items-center gap-1.5" style={{ color: 'var(--text-primary)' }}>
+              <div className="flex justify-between items-center border-b border-neutral-800 pb-3">
+                <h3 className="font-extrabold text-lg text-white flex items-center gap-1.5">
                   <Info className="w-5 h-5 text-brand-purple" /> About Taskflow
                 </h3>
-                <button onClick={() => setShowAbout(false)} className="p-1 rounded" style={{ color: 'var(--text-muted)' }}>
+                <button onClick={() => setShowAbout(false)} className="p-1 text-neutral-400 hover:text-white rounded hover:bg-neutral-800">
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
               {/* Philosophy explainer */}
-              <div className="space-y-4 text-xs leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
+              <div className="space-y-4 text-xs text-neutral-300 leading-relaxed">
                 <div>
-                  <h4 className="font-bold mb-1" style={{ color: 'var(--text-primary)' }}>Plan. Reflect. Improve.</h4>
+                  <h4 className="font-bold text-white mb-1">Plan. Reflect. Improve.</h4>
                   <p>
                     Taskflow utilizes a unique reflection layer to record not just what you plan, but what happened. Reflecting on lessons and compromises turns action trackers into long-term growth tools.
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 p-3 rounded-xl border" style={{ background: 'var(--surface-elevated)', borderColor: 'var(--border)' }}>
+                <div className="grid grid-cols-2 gap-2 bg-neutral-950 p-3 rounded-xl border border-neutral-850">
                   <div className="p-2 space-y-0.5">
                     <span className="font-bold text-brand-purple block uppercase text-[8px]">Objective</span>
-                    <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Target target</span>
+                    <span className="text-[11px] text-neutral-400">Target target</span>
                   </div>
                   <div className="p-2 space-y-0.5">
                     <span className="font-bold text-emerald-400 block uppercase text-[8px]">Result</span>
-                    <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Actual outcome</span>
+                    <span className="text-[11px] text-neutral-400">Actual outcome</span>
                   </div>
                   <div className="p-2 space-y-0.5">
                     <span className="font-bold text-brand-amber block uppercase text-[8px]">Lesson</span>
-                    <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Growth takeaway</span>
+                    <span className="text-[11px] text-neutral-400">Growth takeaway</span>
                   </div>
                   <div className="p-2 space-y-0.5">
                     <span className="font-bold text-brand-coral block uppercase text-[8px]">Compromise</span>
-                    <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Sacrificed scope</span>
+                    <span className="text-[11px] text-neutral-400">Sacrificed scope</span>
                   </div>
                 </div>
 
                 {/* USER PERFORMANCE STATS */}
-                <div className="space-y-3 border-t pt-4" style={{ borderColor: 'var(--border)' }}>
-                  <h4 className="font-bold flex items-center gap-1" style={{ color: 'var(--text-primary)' }}>
+                <div className="space-y-3 border-t border-neutral-800 pt-4">
+                  <h4 className="font-bold text-white flex items-center gap-1">
                     <BarChart2 className="w-4 h-4 text-brand-teal" /> Personal Stats
                   </h4>
                   <div className="grid grid-cols-3 gap-2 text-center">
-                    <div className="p-3 rounded-lg" style={{ background: 'var(--surface-elevated)' }}>
+                    <div className="p-3 bg-neutral-950 rounded-lg">
                       <span className="block text-lg font-bold text-brand-purple">{projects.filter(p => p.status === 'done').length}</span>
-                      <span className="text-[9px] uppercase" style={{ color: 'var(--text-muted)' }}>Projects Done</span>
+                      <span className="text-[9px] text-neutral-500 uppercase">Projects Done</span>
                     </div>
-                    <div className="p-3 rounded-lg" style={{ background: 'var(--surface-elevated)' }}>
+                    <div className="p-3 bg-neutral-950 rounded-lg">
                       <span className="block text-lg font-bold text-brand-teal">{habits.reduce((acc, h) => acc + h.streak, 0)}</span>
-                      <span className="text-[9px] uppercase" style={{ color: 'var(--text-muted)' }}>Total Streaks</span>
+                      <span className="text-[9px] text-neutral-500 uppercase">Total Streaks</span>
                     </div>
-                    <div className="p-3 rounded-lg" style={{ background: 'var(--surface-elevated)' }}>
+                    <div className="p-3 bg-neutral-950 rounded-lg">
                       <span className="block text-lg font-bold text-brand-amber">{notifications.length}</span>
-                      <span className="text-[9px] uppercase" style={{ color: 'var(--text-muted)' }}>Alerts Issued</span>
+                      <span className="text-[9px] text-neutral-500 uppercase">Alerts Issued</span>
                     </div>
                   </div>
                 </div>
 
                 {/* WEEKLY DEBRIEF LIST */}
-                <div className="space-y-3 border-t pt-4" style={{ borderColor: 'var(--border)' }}>
+                <div className="space-y-3 border-t border-neutral-800 pt-4">
                   <div className="flex justify-between items-center">
-                    <h4 className="font-bold flex items-center gap-1" style={{ color: 'var(--text-primary)' }}>
+                    <h4 className="font-bold text-white flex items-center gap-1">
                       <BarChart2 className="w-4 h-4 text-brand-amber" /> Weekly Sunday Debriefs
                     </h4>
                     <button
@@ -2134,18 +2298,18 @@ export default function DashboardPage() {
                   
                   <div className="space-y-2 max-h-48 overflow-y-auto">
                     {debriefs.length === 0 ? (
-                      <p className="text-[10px] italic py-2" style={{ color: 'var(--text-muted)' }}>No debrief logs yet. Generate one on Sunday!</p>
+                      <p className="text-[10px] text-neutral-500 italic py-2">No debrief logs yet. Generate one on Sunday!</p>
                     ) : (
                       debriefs.map(deb => (
-                        <div key={deb.id} className="p-3 rounded-lg border space-y-1.5 text-[11px]" style={{ background: 'var(--surface-elevated)', borderColor: 'var(--border)' }}>
+                        <div key={deb.id} className="p-3 rounded-lg bg-neutral-950 border border-neutral-850 space-y-1.5 text-[11px]">
                           <div className="flex justify-between items-center text-[9px] text-brand-teal uppercase font-bold">
                             <span>Week starting {deb.weekStart}</span>
-                            <span style={{ color: 'var(--text-muted)' }}>Issued {new Date(deb.generatedAt).toLocaleDateString()}</span>
+                            <span className="text-neutral-500">Issued {new Date(deb.generatedAt).toLocaleDateString()}</span>
                           </div>
-                          <p className="leading-normal" style={{ color: 'var(--text-secondary)' }}>
+                          <p className="text-neutral-300 leading-normal">
                             {deb.summary}
                           </p>
-                          <div className="grid grid-cols-2 gap-1.5 text-[10px] border-t pt-1.5" style={{ borderColor: 'var(--border)', color: 'var(--text-muted)' }}>
+                          <div className="grid grid-cols-2 gap-1.5 text-[10px] border-t border-neutral-900 pt-1.5 text-neutral-400">
                             <div>
                               <span className="font-semibold text-brand-purple">Top Lesson:</span> {deb.topLesson}
                             </div>
@@ -2153,7 +2317,7 @@ export default function DashboardPage() {
                               <span className="font-semibold text-emerald-400">Top Result:</span> {deb.topResult}
                             </div>
                           </div>
-                          <div className="text-[9px]" style={{ color: 'var(--text-muted)' }}>
+                          <div className="text-[9px] text-neutral-500 pt-1">
                             Completed {deb.tasksCompleted} tasks • Kept {deb.habitsKept} habits • Hit {deb.deadlinesHit} deadlines • Missed {deb.deadlinesMissed} deadlines
                           </div>
                         </div>
@@ -2164,7 +2328,7 @@ export default function DashboardPage() {
               </div>
             </div>
             
-            <div className="text-[10px] border-t pt-4 text-center" style={{ color: 'var(--text-muted)', borderColor: 'var(--border)' }}>
+            <div className="text-[10px] text-neutral-500 border-t border-neutral-800 pt-4 text-center">
               Taskflow App Sandbox • Version 1.0.0 • Plan. Reflect. Improve.
             </div>
           </div>
@@ -2175,25 +2339,18 @@ export default function DashboardPage() {
       {/* 4. MODALS (CREATE ENTITIES) */}
       {/* ======================================================== */}
       {modalType !== '' && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: 'var(--overlay)', backdropFilter: 'blur(4px)' }}
-        >
-          <div
-            className="w-full max-w-md border rounded-2xl p-6 space-y-5 animate-slide-up text-left"
-            style={{ background: 'var(--surface)', borderColor: 'var(--border)' }}
-          >
-            <div className="flex justify-between items-center border-b pb-3" style={{ borderColor: 'var(--border)' }}>
-              <h3 className="font-bold text-base" style={{ color: 'var(--text-primary)' }}>
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-2xl p-6 space-y-5 animate-slide-up text-left">
+            <div className="flex justify-between items-center border-b border-neutral-800 pb-3">
+              <h3 className="font-bold text-white text-base">
                 {modalType === 'new-project' && 'Create New Project'}
                 {modalType === 'new-task' && `Add Task to ${selectedProject?.name}`}
                 {modalType === 'new-habit' && 'Establish Daily Habit'}
                 {modalType === 'new-scheduled' && 'Schedule One-Off Task'}
               </h3>
-              <button
+              <button 
                 onClick={() => { setModalType(''); setDeadlineWarning(null); }}
-                className="p-1 rounded-lg transition"
-                style={{ color: 'var(--text-muted)' }}
+                className="p-1 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -2201,42 +2358,40 @@ export default function DashboardPage() {
 
             <form onSubmit={handleCreateEntity} className="space-y-4">
               {errorForm && (
-                <div className="p-3 bg-red-950/20 border border-red-900/60 rounded text-red-300 text-xs">
+                <div className="p-3 bg-red-950/20 border border-red-900 rounded text-red-300 text-xs">
                   {errorForm}
                 </div>
               )}
 
               {/* Name */}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-widest block" style={{ color: 'var(--text-muted)' }}>Name / Label</label>
+                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block">Name / Label</label>
                 <input
                   type="text"
                   required
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
                   placeholder="Enter details..."
-                  className="w-full px-3 py-2.5 text-xs rounded border outline-none"
-                  style={S.input}
+                  className="w-full px-3 py-2.5 text-xs rounded bg-neutral-950 border border-neutral-800 focus:border-brand-purple outline-none text-white"
                 />
               </div>
 
               {/* Objective */}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-widest block" style={{ color: 'var(--text-muted)' }}>Objective (Reflective field)</label>
+                <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block">Objective (Reflective field)</label>
                 <textarea
                   required
                   value={formObjective}
                   onChange={(e) => setFormObjective(e.target.value)}
                   placeholder="What do we want to achieve with this item?"
-                  className="w-full px-3 py-2.5 text-xs rounded border outline-none h-16 resize-none"
-                  style={S.input}
+                  className="w-full px-3 py-2.5 text-xs rounded bg-neutral-950 border border-neutral-800 focus:border-brand-purple outline-none text-white h-16 resize-none"
                 />
               </div>
 
               {/* Deadline inputs */}
               {(modalType === 'new-project' || modalType === 'new-task' || modalType === 'new-scheduled') && (
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-widest block" style={{ color: 'var(--text-muted)' }}>
+                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block">
                     {modalType === 'new-scheduled' ? 'Scheduled Date' : 'Deadline (Optional)'}
                   </label>
                   <input
@@ -2244,8 +2399,7 @@ export default function DashboardPage() {
                     required={modalType === 'new-scheduled'}
                     value={formDeadline}
                     onChange={(e) => handleDeadlineChange(e.target.value)}
-                    className="w-full px-3 py-2.5 text-xs rounded border outline-none"
-                    style={S.input}
+                    className="w-full px-3 py-2.5 text-xs rounded bg-neutral-950 border border-neutral-800 focus:border-brand-purple outline-none text-white"
                   />
                   {deadlineWarning && (
                     <span className="text-[10px] text-brand-amber font-semibold block leading-normal pt-1">
@@ -2258,14 +2412,13 @@ export default function DashboardPage() {
               {/* Time input (scheduled only) */}
               {modalType === 'new-scheduled' && (
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-widest block" style={{ color: 'var(--text-muted)' }}>Time (HH:MM)</label>
+                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block">Time (HH:MM)</label>
                   <input
                     type="time"
                     required
                     value={formTime}
                     onChange={(e) => setFormTime(e.target.value)}
-                    className="w-full px-3 py-2.5 text-xs rounded border outline-none"
-                    style={S.input}
+                    className="w-full px-3 py-2.5 text-xs rounded bg-neutral-950 border border-neutral-800 focus:border-brand-purple outline-none text-white"
                   />
                 </div>
               )}

@@ -125,8 +125,13 @@ export async function POST(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
+    // Normalize both sides to plain YYYY-MM-DD for reliable comparison
+    // (SQLite may store dates as ISO timestamps like "2026-07-04T00:00:00.000Z")
+    const normalizeDate = (d: string) => d.split('T')[0];
+    const dateNorm = normalizeDate(date);
+
     // Toggle check-in: if already exists, delete it (uncheck), otherwise insert it
-    const existingCheckIn = habit.checkIns.find(c => c.date === date);
+    const existingCheckIn = habit.checkIns.find(c => normalizeDate(c.date) === dateNorm);
 
     if (existingCheckIn) {
       // Uncheck
@@ -134,11 +139,11 @@ export async function POST(
         where: { id: existingCheckIn.id },
       });
     } else {
-      // Check in
+      // Check in — store as plain YYYY-MM-DD to avoid future comparison issues
       await db.habitCheckIn.create({
         data: {
           habitId: id,
-          date,
+          date: dateNorm,
         },
       });
     }
