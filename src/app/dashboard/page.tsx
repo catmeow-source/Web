@@ -2014,7 +2014,7 @@ export default function DashboardPage() {
                 <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block">Full Name</label>
                 <input
                   type="text"
-                  defaultValue={user.name}
+                  defaultValue={user?.name ?? ""}
                   id="profile-name"
                   placeholder="Enter name"
                   className="w-full px-3 py-2 rounded bg-neutral-950 border border-neutral-800 text-xs focus:border-brand-teal outline-none"
