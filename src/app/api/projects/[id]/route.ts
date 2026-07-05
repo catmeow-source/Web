@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
-import { calculateProjectHealth } from '../../route';
+import { calculateProjectHealth } from '../route';
 
 export async function GET(
   request: Request,
