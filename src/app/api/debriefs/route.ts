@@ -164,7 +164,7 @@ export async function POST() {
     });
 
     const lessonsSection = lessonPatterns.length > 0
-      ? `\n\nLesson Patterns:\n${lessonPatterns.map(lp => `• ${lp}`).join('\n')}`
+      ? `\n\nLesson Patterns:\n${lessonPatterns.map((lp: string) => `• ${lp}`).join('\n')}`
       : '';
     const coachSection = `\n\nHabit Coach:\n${habitAdvice}`;
     const fullSummary = `${debriefInfo.summary}${lessonsSection}${coachSection}`;

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { AnimatedModal } from '@/components/AnimatedModal';
 import { 
   Bell, User, Info, Folder, RotateCcw, Calendar as CalendarIcon, Clock, Plus, Trash2, 
   Edit, Brain, Check, X, ChevronLeft, ChevronRight, Sparkles, Sun, Moon, LogOut, 
@@ -105,6 +106,13 @@ export default function DashboardPage() {
 
   // Master State
   const [user, setUser] = useState<UserProfile | null>(null);
+  
+  // Toast State
+  const [toast, setToast] = useState<{message: string, type: 'info'|'success'|'error'} | null>(null);
+  const showToast = (message: string, type: 'info' | 'success' | 'error' = 'info') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
   const [projects, setProjects] = useState<Project[]>([]);
   const [habits, setHabits] = useState<Habit[]>([]);
   const [scheduledTasks, setScheduledTasks] = useState<ScheduledTask[]>([]);
@@ -317,7 +325,7 @@ export default function DashboardPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        alert(data.error || 'Failed updating profile');
+        showToast(data.error || 'Failed updating profile', 'error');
         return;
       }
       setUser(data);
@@ -330,10 +338,10 @@ export default function DashboardPage() {
         document.documentElement.classList.add('dark');
         localStorage.setItem('theme', 'dark');
       }
-      alert('Settings updated successfully!');
+      showToast('Settings updated successfully!', 'success');
     } catch (e) {
       console.error(e);
-      alert('Failed updating profile settings');
+      showToast('Failed updating profile settings', 'error');
     }
   };
 
@@ -459,7 +467,7 @@ export default function DashboardPage() {
 
       await refreshAllData();
     } catch (err: any) {
-      alert(err.message);
+      showToast(err.message, 'error');
     }
   };
 
@@ -493,7 +501,7 @@ export default function DashboardPage() {
       fetchAiRecommendations();
     } catch (err) {
       console.error(err);
-      alert('Failed to delete item.');
+      showToast('Failed to delete item.', 'error');
     }
   };
 
@@ -520,10 +528,10 @@ export default function DashboardPage() {
       const res = await fetch(`/api/projects/${projectId}/prioritize`, { method: 'POST' });
       if (!res.ok) throw new Error('Prioritization failed');
       await refreshAllData();
-      alert('AI task prioritization complete! Tasks have been reordered and AI priority badges applied.');
+      showToast('AI task prioritization complete! Tasks have been reordered and AI priority badges applied.', 'success');
     } catch (e) {
       console.error(e);
-      alert('AI prioritize failed. Check server console.');
+      showToast('AI prioritize failed. Check server console.', 'error');
     } finally {
       setPrioritizingProjId(null);
     }
@@ -536,10 +544,10 @@ export default function DashboardPage() {
       const res = await fetch('/api/debriefs', { method: 'POST' });
       if (!res.ok) throw new Error('Debrief generation failed');
       await refreshAllData();
-      alert('Weekly Debrief generated successfully!');
+      showToast('Weekly Debrief generated successfully!', 'success');
     } catch (e) {
       console.error(e);
-      alert('Failed generating debrief');
+      showToast('Failed generating debrief', 'error');
     } finally {
       setGeneratingDebrief(false);
     }
@@ -552,10 +560,10 @@ export default function DashboardPage() {
       const res = await fetch('/api/reports', { method: 'POST' });
       if (!res.ok) throw new Error('Monthly report generation failed');
       await refreshAllData();
-      alert('Monthly Productivity Report generated successfully!');
+      showToast('Monthly Productivity Report generated successfully!', 'success');
     } catch (e) {
       console.error(e);
-      alert('Failed generating monthly report');
+      showToast('Failed generating monthly report', 'error');
     } finally {
       setGeneratingReport(false);
     }
@@ -576,7 +584,7 @@ export default function DashboardPage() {
       setMoodTasks(data.tasks || []);
     } catch (e: any) {
       console.error(e);
-      alert(e.message || 'Mood reprioritization failed');
+      showToast(e.message || 'Mood reprioritization failed', 'error');
     } finally {
       setLoadingMood(false);
     }
@@ -593,7 +601,7 @@ export default function DashboardPage() {
       setShowFocusModal(true);
     } catch (e) {
       console.error(e);
-      alert('Failed to get focus block suggestions.');
+      showToast('Failed to get focus block suggestions.', 'error');
     } finally {
       setLoadingFocus(false);
     }
@@ -666,7 +674,7 @@ export default function DashboardPage() {
       setSelectedBreakdownTasks(checks);
     } catch (e: any) {
       console.error(e);
-      alert(e.message || 'Failed task breakdown generation.');
+      showToast(e.message || 'Failed task breakdown generation.', 'error');
     } finally {
       setLoadingBreakdown(false);
     }
@@ -675,7 +683,7 @@ export default function DashboardPage() {
   const handleCreateSuggestedTasks = async (projectId: string) => {
     const tasksToCreate = suggestedBreakdown.filter((_, idx) => selectedBreakdownTasks[idx]);
     if (tasksToCreate.length === 0) {
-      alert('Please check at least one suggested task.');
+      showToast('Please check at least one suggested task.', 'info');
       return;
     }
 
@@ -695,10 +703,10 @@ export default function DashboardPage() {
       setSuggestedBreakdown([]);
       setSelectedBreakdownTasks({});
       await refreshAllData();
-      alert('Suggested tasks added to project successfully!');
+      showToast('Suggested tasks added to project successfully!', 'success');
     } catch (e) {
       console.error(e);
-      alert('Failed adding suggested tasks.');
+      showToast('Failed adding suggested tasks.', 'error');
     } finally {
       setLoadingBreakdown(false);
     }
@@ -819,6 +827,19 @@ export default function DashboardPage() {
 
   return (
     <div className="flex-grow flex flex-col bg-neutral-950 text-neutral-100 max-w-5xl mx-auto w-full min-h-screen relative pb-24 shadow-2xl">
+      {/* Toast Notification Overlay */}
+      {toast && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[200] animate-fade-in">
+          <div className={`px-6 py-3 rounded-lg shadow-lg border backdrop-blur-md whitespace-pre-wrap ${
+            toast.type === 'error' ? 'bg-red-500/20 border-red-500/50 text-red-100' :
+            toast.type === 'success' ? 'bg-green-500/20 border-green-500/50 text-green-100' :
+            'bg-brand-purple/20 border-brand-purple/50 text-brand-purple-100'
+          }`}>
+            {toast.message}
+          </div>
+        </div>
+      )}
+
       {/* 1. TOP BAR */}
       <header className="sticky top-0 z-30 h-16 border-b border-neutral-900 bg-neutral-950/80 backdrop-blur-md flex items-center justify-between px-6">
         {/* Brand */}
@@ -924,9 +945,9 @@ export default function DashboardPage() {
                 </button>
                 <button 
                   onClick={() => {
-                    alert(`Today's Top 3 Planned Actions:\n\n` + 
+                    showToast(`Today's Top 3 Planned Actions:\n\n` + 
                       aiActions.map((a, i) => `${i+1}. ${a.name} (${a.estimate})\n   Reason: ${a.reason}`).join('\n\n')
-                    );
+                    , 'info');
                   }}
                   className="px-4 py-2 text-xs font-semibold rounded-lg bg-gradient-to-r from-brand-amber to-brand-coral text-white transition hover:opacity-95"
                 >
@@ -1027,7 +1048,7 @@ export default function DashboardPage() {
                               <span
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  alert(`${project.name} Health Details:\n\n${(project as any).healthDetails}`);
+                                  showToast(`${project.name} Health Details:\n\n${(project as any).healthDetails}`, 'info');
                                 }}
                                 className={`px-2 py-0.5 rounded text-[10px] font-bold border transition hover:opacity-85 cursor-help ${
                                   (project as any).healthScore >= 70 ? 'bg-emerald-950/40 text-emerald-400 border-emerald-950' :
@@ -1906,8 +1927,8 @@ export default function DashboardPage() {
       {/* ======================================================== */}
       {/* OVERLAY PANEL 1: NOTIFICATIONS FEED */}
       {/* ======================================================== */}
-      {showNotifications && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex justify-end animate-fade-in" onClick={() => setShowNotifications(false)}>
+      <AnimatedModal isOpen={showNotifications} onClose={() => setShowNotifications(false)} position="right">
+
           <div 
             className="w-full max-w-md h-full bg-neutral-900 border-l border-neutral-800 p-6 flex flex-col justify-between text-left animate-slide-up"
             onClick={(e) => e.stopPropagation()}
@@ -1966,14 +1987,14 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
-        </div>
-      )}
+        </AnimatedModal>
+      
 
       {/* ======================================================== */}
       {/* OVERLAY PANEL 2: PROFILE & SETTINGS */}
       {/* ======================================================== */}
-      {showProfile && user && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex justify-end" onClick={() => setShowProfile(false)}>
+      <AnimatedModal isOpen={showProfile && !!user} onClose={() => setShowProfile(false)} position="right">
+
           <div 
             className="w-full max-w-md h-full bg-neutral-900 border-l border-neutral-800 p-6 flex flex-col gap-6 text-left overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
@@ -2147,14 +2168,14 @@ export default function DashboardPage() {
               </button>
             </div>
           </div>
-        </div>
-      )}
+        </AnimatedModal>
+      
 
       {/* ======================================================== */}
       {/* FOCUS BLOCK MODAL (AI 12) */}
       {/* ======================================================== */}
-      {showFocusModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowFocusModal(false)}>
+      <AnimatedModal isOpen={showFocusModal} onClose={() => setShowFocusModal(false)} position="center">
+
           <div
             className="w-full max-w-lg bg-neutral-900 border border-neutral-800 rounded-2xl p-6 space-y-5 shadow-2xl max-h-[85vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
@@ -2210,14 +2231,14 @@ export default function DashboardPage() {
               Got it, let's focus!
             </button>
           </div>
-        </div>
-      )}
+        </AnimatedModal>
+      
 
       {/* ======================================================== */}
       {/* OVERLAY PANEL 3: ABOUT (PHILOSOPHY & STATS) */}
       {/* ======================================================== */}
-      {showAbout && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex justify-end" onClick={() => setShowAbout(false)}>
+      <AnimatedModal isOpen={showAbout} onClose={() => setShowAbout(false)} position="right">
+
           <div 
             className="w-full max-w-md h-full bg-neutral-900 border-l border-neutral-800 p-6 flex flex-col justify-between text-left"
             onClick={(e) => e.stopPropagation()}
@@ -2332,14 +2353,14 @@ export default function DashboardPage() {
               Taskflow App Sandbox • Version 1.0.0 • Plan. Reflect. Improve.
             </div>
           </div>
-        </div>
-      )}
+        </AnimatedModal>
+      
 
       {/* ======================================================== */}
       {/* 4. MODALS (CREATE ENTITIES) */}
       {/* ======================================================== */}
-      {modalType !== '' && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
+      <AnimatedModal isOpen={modalType !== ''} onClose={() => setModalType('')} position="center">
+
           <div className="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-2xl p-6 space-y-5 animate-slide-up text-left">
             <div className="flex justify-between items-center border-b border-neutral-800 pb-3">
               <h3 className="font-bold text-white text-base">
@@ -2432,8 +2453,8 @@ export default function DashboardPage() {
               </button>
             </form>
           </div>
-        </div>
-      )}
+        </AnimatedModal>
+      
 
     </div>
   );
