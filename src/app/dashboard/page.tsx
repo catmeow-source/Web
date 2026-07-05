@@ -2025,7 +2025,7 @@ export default function DashboardPage() {
                 <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block">Email Address</label>
                 <input
                   type="email"
-                  defaultValue={user.email}
+                  defaultValue={user?.email ?? ""}
                   id="profile-email"
                   placeholder="Enter email"
                   className="w-full px-3 py-2 rounded bg-neutral-950 border border-neutral-800 text-xs focus:border-brand-teal outline-none"
@@ -2035,7 +2035,7 @@ export default function DashboardPage() {
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block">Reminder Window</label>
                 <select
-                  defaultValue={user.reminderTiming}
+                  defaultValue={user?.reminderTiming ?? "0"}
                   id="profile-reminder"
                   className="w-full px-3 py-2 rounded bg-neutral-950 border border-neutral-800 text-xs focus:border-brand-teal outline-none text-white"
                 >
