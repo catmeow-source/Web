@@ -2,7 +2,10 @@ import { NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { getSessionUser } from '@/lib/auth';
 import { generateWeeklyDebrief } from '@/lib/ai';
-
+import {
+  spotWeeklyLessonPatterns,
+  generateHabitCoachFeedback,
+} from '@/lib/ai';
 export const dynamic = 'force-dynamic';
 
 // Helper to get previous Sunday
@@ -143,7 +146,7 @@ export async function POST() {
     ].filter(r => r && r.trim().length > 0);
 
     // Call new AI helpers (AI 5 and AI 6)
-    const { spotWeeklyLessonPatterns, generateHabitCoachFeedback } = require('@/lib/ai');
+
     const lessonPatterns = await spotWeeklyLessonPatterns(lessons);
     
     const totalWeekDeadlines = totalDeadlinesHit + totalDeadlinesMissed;
